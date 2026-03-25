@@ -1,27 +1,18 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
-import type { Database, Post, PostDetail, PostFeedItem, PostImage, Session, Spot, User } from "@/lib/types";
+import type { Session, User } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import type { PostDetail, PostFeedItem } from "@/lib/types";
 
-const DB_PATH = path.join(process.cwd(), "data", "db.json");
-
-async function readDb(): Promise<Database> {
-  const raw = await fs.readFile(DB_PATH, "utf-8");
-  return JSON.parse(raw) as Database;
+export async function findUserByEmail(email: string): Promise<User | null> {
+  return prisma.user.findUnique({
+    where: { email: email.toLowerCase() },
+  });
 }
 
-async function writeDb(db: Database): Promise<void> {
-  await fs.writeFile(DB_PATH, JSON.stringify(db, null, 2), "utf-8");
-}
-
-export async function findUserByEmail(email: string): Promise<User | undefined> {
-  const db = await readDb();
-  return db.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-}
-
-export async function findUserById(id: string): Promise<User | undefined> {
-  const db = await readDb();
-  return db.users.find((u) => u.id === id);
+export async function findUserById(id: string): Promise<User | null> {
+  return prisma.user.findUnique({
+    where: { id },
+  });
 }
 
 export async function createUser(input: {
@@ -29,41 +20,34 @@ export async function createUser(input: {
   email: string;
   passwordHash: string;
 }): Promise<User> {
-  const db = await readDb();
-  const user: User = {
-    id: crypto.randomUUID(),
-    name: input.name,
-    email: input.email,
-    passwordHash: input.passwordHash,
-    createdAt: new Date().toISOString(),
-  };
-  db.users.push(user);
-  await writeDb(db);
-  return user;
+  return prisma.user.create({
+    data: {
+      name: input.name,
+      email: input.email,
+      passwordHash: input.passwordHash,
+    },
+  });
 }
 
 export async function createSession(userId: string): Promise<Session> {
-  const db = await readDb();
-  const session: Session = {
-    id: crypto.randomUUID(),
-    userId,
-    token: crypto.randomUUID(),
-    createdAt: new Date().toISOString(),
-  };
-  db.sessions.push(session);
-  await writeDb(db);
-  return session;
+  return prisma.session.create({
+    data: {
+      userId,
+      token: crypto.randomUUID(),
+    },
+  });
 }
 
-export async function getSessionByToken(token: string): Promise<Session | undefined> {
-  const db = await readDb();
-  return db.sessions.find((s) => s.token === token);
+export async function getSessionByToken(token: string): Promise<Session | null> {
+  return prisma.session.findUnique({
+    where: { token },
+  });
 }
 
 export async function deleteSessionByToken(token: string): Promise<void> {
-  const db = await readDb();
-  db.sessions = db.sessions.filter((s) => s.token !== token);
-  await writeDb(db);
+  await prisma.session.deleteMany({
+    where: { token },
+  });
 }
 
 export async function createPostWithSpotAndImages(input: {
@@ -78,111 +62,122 @@ export async function createPostWithSpotAndImages(input: {
     lng: number | null;
   };
   imageUrls: string[];
-}): Promise<Post> {
-  const db = await readDb();
+}): Promise<{ id: string }> {
+  const post = await prisma.$transaction(async (tx) => {
+    const spot = await tx.spot.create({
+      data: {
+        name: input.spot.name,
+        prefecture: input.spot.prefecture,
+        country: input.spot.country,
+        lat: input.spot.lat,
+        lng: input.spot.lng,
+      },
+    });
 
-  const spot: Spot = {
-    id: crypto.randomUUID(),
-    name: input.spot.name,
-    prefecture: input.spot.prefecture,
-    country: input.spot.country,
-    lat: input.spot.lat,
-    lng: input.spot.lng,
-    createdAt: new Date().toISOString(),
-  };
-  db.spots.push(spot);
+    const createdPost = await tx.post.create({
+      data: {
+        title: input.title,
+        body: input.body,
+        userId: input.userId,
+        spotId: spot.id,
+      },
+    });
 
-  const post: Post = {
-    id: crypto.randomUUID(),
-    title: input.title,
-    body: input.body,
-    userId: input.userId,
-    spotId: spot.id,
-    createdAt: new Date().toISOString(),
-  };
-  db.posts.push(post);
+    await tx.postImage.createMany({
+      data: input.imageUrls.map((imageUrl) => ({
+        postId: createdPost.id,
+        imageUrl,
+      })),
+    });
 
-  const images: PostImage[] = input.imageUrls.map((imageUrl) => ({
-    id: crypto.randomUUID(),
-    postId: post.id,
-    imageUrl,
-    createdAt: new Date().toISOString(),
-  }));
-  db.postImages.push(...images);
+    return createdPost;
+  });
 
-  await writeDb(db);
-  return post;
+  return { id: post.id };
 }
 
 export async function getPostFeed(): Promise<PostFeedItem[]> {
-  const db = await readDb();
+  const posts = await prisma.post.findMany({
+    orderBy: { createdAt: "desc" },
+    include: {
+      user: true,
+      spot: true,
+      images: { orderBy: { createdAt: "asc" } },
+      _count: {
+        select: { likes: true },
+      },
+    },
+  });
 
-  return [...db.posts]
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .map((post) => {
-      const user = db.users.find((u) => u.id === post.userId);
-      const spot = db.spots.find((s) => s.id === post.spotId);
-      const images = db.postImages
-        .filter((img) => img.postId === post.id)
-        .map((img) => img.imageUrl);
-      const likeCount = db.likes.filter((like) => like.postId === post.id).length;
-
-      return {
-        id: post.id,
-        title: post.title,
-        body: post.body,
-        createdAt: post.createdAt,
-        authorName: user?.name ?? "Unknown",
-        spotName: spot?.name ?? "Unknown",
-        prefecture: spot?.prefecture ?? "",
-        country: spot?.country ?? "",
-        imageUrls: images,
-        likeCount,
-      };
-    });
+  return posts.map((post) => ({
+    id: post.id,
+    title: post.title,
+    body: post.body,
+    createdAt: post.createdAt.toISOString(),
+    authorName: post.user.name,
+    spotName: post.spot.name,
+    prefecture: post.spot.prefecture,
+    country: post.spot.country,
+    imageUrls: post.images.map((img) => img.imageUrl),
+    likeCount: post._count.likes,
+  }));
 }
 
 export async function getPostDetail(postId: string, viewerUserId?: string): Promise<PostDetail | null> {
-  const db = await readDb();
-  const post = db.posts.find((item) => item.id === postId);
-  if (!post) return null;
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    include: {
+      user: true,
+      spot: true,
+      images: { orderBy: { createdAt: "asc" } },
+      likes: {
+        select: {
+          userId: true,
+        },
+      },
+    },
+  });
 
-  const user = db.users.find((u) => u.id === post.userId);
-  const spot = db.spots.find((s) => s.id === post.spotId);
-  const images = db.postImages.filter((img) => img.postId === post.id).map((img) => img.imageUrl);
-  const postLikes = db.likes.filter((like) => like.postId === post.id);
+  if (!post) return null;
 
   return {
     id: post.id,
     title: post.title,
     body: post.body,
-    createdAt: post.createdAt,
-    authorName: user?.name ?? "Unknown",
-    spotName: spot?.name ?? "Unknown",
-    prefecture: spot?.prefecture ?? "",
-    country: spot?.country ?? "",
-    lat: spot?.lat ?? null,
-    lng: spot?.lng ?? null,
-    imageUrls: images,
-    likeCount: postLikes.length,
-    hasLiked: viewerUserId ? postLikes.some((like) => like.userId === viewerUserId) : false,
+    createdAt: post.createdAt.toISOString(),
+    authorName: post.user.name,
+    spotName: post.spot.name,
+    prefecture: post.spot.prefecture,
+    country: post.spot.country,
+    lat: post.spot.lat,
+    lng: post.spot.lng,
+    imageUrls: post.images.map((img) => img.imageUrl),
+    likeCount: post.likes.length,
+    hasLiked: viewerUserId ? post.likes.some((like) => like.userId === viewerUserId) : false,
   };
 }
 
 export async function toggleLike(postId: string, userId: string): Promise<void> {
-  const db = await readDb();
-  const existing = db.likes.find((like) => like.postId === postId && like.userId === userId);
+  const existing = await prisma.like.findUnique({
+    where: {
+      postId_userId: {
+        postId,
+        userId,
+      },
+    },
+  });
 
   if (existing) {
-    db.likes = db.likes.filter((like) => like.id !== existing.id);
-  } else {
-    db.likes.push({
-      id: crypto.randomUUID(),
-      postId,
-      userId,
-      createdAt: new Date().toISOString(),
+    await prisma.like.delete({
+      where: { id: existing.id },
     });
+    return;
   }
 
-  await writeDb(db);
+  await prisma.like.create({
+    data: {
+      postId,
+      userId,
+    },
+  });
 }

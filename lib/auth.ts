@@ -1,5 +1,6 @@
 import crypto, { scrypt as _scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
+import type { User } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
@@ -10,7 +11,6 @@ import {
   findUserById,
   getSessionByToken,
 } from "@/lib/db";
-import type { User } from "@/lib/types";
 
 const scrypt = promisify(_scrypt);
 const SESSION_COOKIE = "porterra_session";
@@ -99,7 +99,7 @@ export async function getCurrentUser(): Promise<User | null> {
   if (!session) return null;
 
   const user = await findUserById(session.userId);
-  return user ?? null;
+  return user;
 }
 
 export async function requireUser(): Promise<User> {

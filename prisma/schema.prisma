@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  posts        Post[]
+  likes        Like[]
+  sessions     Session[]
+
+  @@map("users")
+}
+
+model Spot {
+  id         String   @id @default(cuid())
+  name       String
+  prefecture String
+  country    String
+  lat        Float?
+  lng        Float?
+  createdAt  DateTime @default(now())
+  posts      Post[]
+
+  @@map("spots")
+}
+
+model Post {
+  id        String      @id @default(cuid())
+  title     String
+  body      String
+  userId    String
+  spotId    String
+  createdAt DateTime    @default(now())
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  spot      Spot        @relation(fields: [spotId], references: [id], onDelete: Cascade)
+  images    PostImage[]
+  likes     Like[]
+
+  @@index([userId])
+  @@index([spotId])
+  @@map("posts")
+}
+
+model PostImage {
+  id        String   @id @default(cuid())
+  postId    String
+  imageUrl  String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("post_images")
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@map("likes")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
