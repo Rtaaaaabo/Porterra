@@ -1,11 +1,9 @@
 "use server";
 
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { loginUser, logoutUser, registerUser, requireUser } from "@/lib/auth";
+import { uploadImageToCloudinary } from "@/lib/cloudinary";
 import { createPostWithSpotAndImages, toggleLike } from "@/lib/db";
 
 function getString(formData: FormData, key: string): string {
@@ -17,20 +15,6 @@ function parseNullableNumber(value: string): number | null {
   if (!value) return null;
   const num = Number(value);
   return Number.isNaN(num) ? null : num;
-}
-
-async function saveImageFile(file: File): Promise<string> {
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const extension = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
-  const filename = `${Date.now()}-${crypto.randomUUID()}.${extension}`;
-
-  const targetDir = path.join(process.cwd(), "public", "uploads");
-  await fs.mkdir(targetDir, { recursive: true });
-
-  const targetPath = path.join(targetDir, filename);
-  await fs.writeFile(targetPath, buffer);
-
-  return `/uploads/${filename}`;
 }
 
 export async function registerAction(formData: FormData): Promise<void> {
@@ -92,8 +76,13 @@ export async function createPostAction(formData: FormData): Promise<void> {
   for (const item of files) {
     if (!(item instanceof File)) continue;
     if (!item.name || item.size === 0) continue;
-    const url = await saveImageFile(item);
-    imageUrls.push(url);
+    try {
+      const url = await uploadImageToCloudinary(item);
+      imageUrls.push(url);
+    } catch (error) {
+      console.error("Cloudinary upload error", error);
+      redirect("/posts/new?error=upload_failed");
+    }
   }
 
   if (imageUrls.length === 0) {

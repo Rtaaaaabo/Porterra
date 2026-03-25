@@ -16,7 +16,7 @@
 
 ## 技術方針（画像データ）
 
-- 画像ファイル本体: `public/uploads`（Storage相当）
+- 画像ファイル本体: Cloudinary
 - 投稿データ: PostgreSQL（Prisma）
 - 画像URLのみを `post_images` テーブルに保存
 
@@ -37,7 +37,13 @@
 cp .env.example .env
 ```
 
-2. `DATABASE_URL` を PostgreSQL に合わせて更新
+2. `.env` を更新
+
+- `DATABASE_URL`
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+- `CLOUDINARY_FOLDER`（任意）
 
 3. Prisma Client生成
 
@@ -69,5 +75,6 @@ npm run dev
 - `prisma/schema.prisma`: PostgreSQLスキーマ
 - `lib/prisma.ts`: Prisma Client
 - `lib/db.ts`: DBアクセス層
+- `lib/cloudinary.ts`: Cloudinaryアップロード
 - `lib/auth.ts`: 認証処理
 - `app/actions.ts`: Server Actions

@@ -10,6 +10,7 @@ function readErrorMessage(error: string | undefined): string | null {
   if (!error) return null;
   if (error === "required") return "タイトル・本文・場所名・国は必須です。";
   if (error === "image_required") return "画像を1枚以上アップロードしてください。";
+  if (error === "upload_failed") return "画像アップロードに失敗しました。Cloudinary設定を確認してください。";
   return error;
 }
 
