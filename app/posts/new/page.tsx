@@ -60,7 +60,17 @@ export default async function NewPostPage({ searchParams }: Props) {
 
         <label className="block text-sm font-medium text-slate-700">
           写真
-          <input name="images" type="file" accept="image/*" multiple required className="mt-1 w-full text-sm" />
+          <span className="mt-1 block rounded-md border border-slate-300 bg-slate-50 px-3 py-3">
+            <input
+              name="images"
+              type="file"
+              accept="image/*"
+              multiple
+              required
+              className="w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-sky-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-sky-700"
+            />
+            <span className="mt-2 block text-xs text-slate-500">複数選択可（JPG / PNG / WEBP など）</span>
+          </span>
         </label>
 
         <div className="grid gap-4 sm:grid-cols-2">
