@@ -7,17 +7,12 @@ import { signIn, signOut } from "@/auth";
 import { requireUser } from "@/lib/auth";
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
 import { createUser, createPostWithSpotAndImages, findUserByEmail, toggleLike } from "@/lib/db";
+import { extractLatLngFromImage, geocodeSpotName } from "@/lib/location";
 import { hashPassword } from "@/lib/password";
 
 function getString(formData: FormData, key: string): string {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
-}
-
-function parseNullableNumber(value: string): number | null {
-  if (!value) return null;
-  const num = Number(value);
-  return Number.isNaN(num) ? null : num;
 }
 
 export async function registerAction(formData: FormData): Promise<void> {
@@ -89,8 +84,6 @@ export async function createPostAction(formData: FormData): Promise<void> {
   const spotName = getString(formData, "spotName");
   const prefecture = getString(formData, "prefecture");
   const country = getString(formData, "country");
-  const lat = parseNullableNumber(getString(formData, "lat"));
-  const lng = parseNullableNumber(getString(formData, "lng"));
 
   if (!title || !body || !spotName || !country) {
     redirect("/posts/new?error=required");
@@ -98,10 +91,19 @@ export async function createPostAction(formData: FormData): Promise<void> {
 
   const files = formData.getAll("images");
   const imageUrls: string[] = [];
+  let detectedLat: number | null = null;
+  let detectedLng: number | null = null;
 
   for (const item of files) {
     if (!(item instanceof File)) continue;
     if (!item.name || item.size === 0) continue;
+    if (detectedLat === null || detectedLng === null) {
+      const gps = await extractLatLngFromImage(item);
+      if (gps) {
+        detectedLat = gps.lat;
+        detectedLng = gps.lng;
+      }
+    }
     try {
       const url = await uploadImageToCloudinary(item);
       imageUrls.push(url);
@@ -115,6 +117,18 @@ export async function createPostAction(formData: FormData): Promise<void> {
     redirect("/posts/new?error=image_required");
   }
 
+  if (detectedLat === null || detectedLng === null) {
+    const geocoded = await geocodeSpotName({
+      spotName,
+      prefecture,
+      country,
+    });
+    if (geocoded) {
+      detectedLat = geocoded.lat;
+      detectedLng = geocoded.lng;
+    }
+  }
+
   const post = await createPostWithSpotAndImages({
     title,
     body,
@@ -123,8 +137,8 @@ export async function createPostAction(formData: FormData): Promise<void> {
       name: spotName,
       prefecture,
       country,
-      lat,
-      lng,
+      lat: detectedLat,
+      lng: detectedLng,
     },
     imageUrls,
   });

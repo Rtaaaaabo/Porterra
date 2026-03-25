@@ -105,17 +105,11 @@ export default async function NewPostPage({ searchParams }: Props) {
               placeholder="例: 日本"
             />
           </label>
-
-          <label className="block text-sm font-medium text-slate-700">
-            緯度（任意）
-            <input name="lat" type="number" step="any" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" />
-          </label>
-
-          <label className="block text-sm font-medium text-slate-700 sm:col-span-2">
-            経度（任意）
-            <input name="lng" type="number" step="any" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" />
-          </label>
         </div>
+
+        <p className="text-xs text-slate-500">
+          位置情報は写真のEXIF（GPS）を優先して自動取得します。見つからない場合は場所名から推定します。
+        </p>
 
         <button type="submit" className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700">
           投稿する
