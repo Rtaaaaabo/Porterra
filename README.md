@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Porterra MVP
 
-## Getting Started
+旅先をシェアし、他ユーザーが「場所」と「写真」を見られるサービスの最小実装です。
 
-First, run the development server:
+## 機能（MVP）
+
+- ユーザー登録 / ログイン / ログアウト
+- 投稿作成
+- 写真アップロード（複数可）
+- 場所名の入力（都道府県・国・緯度経度も任意入力）
+- コメント本文
+- 投稿一覧
+- 投稿詳細
+- 他ユーザー投稿の閲覧
+- いいね
+
+## 技術方針（画像データ）
+
+- 画像ファイル本体: `public/uploads`（Storage相当）
+- 投稿データ: `data/db.json`（DB相当）
+- 画像URLのみを `post_images` 相当データとして保存
+
+## DBイメージ（実装上のJSONテーブル）
+
+- `users`
+- `posts`
+- `postImages` (`post_images` 相当)
+- `spots`
+- `likes`
+- `sessions`（ログインセッション用）
+
+### `posts`
+
+- `title`
+- `body`
+- `userId`
+- `spotId`
+- `createdAt`
+
+### `spots`
+
+- `name`
+- `prefecture`
+- `country`
+- `lat`
+- `lng`
+
+## 起動方法
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`http://localhost:3000` を開いて利用してください。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 主なファイル
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `app/page.tsx`: 投稿一覧
+- `app/posts/new/page.tsx`: 投稿作成
+- `app/posts/[id]/page.tsx`: 投稿詳細
+- `app/login/page.tsx`: ログイン
+- `app/register/page.tsx`: 新規登録
+- `app/actions.ts`: Server Actions（認証・投稿・いいね）
+- `lib/auth.ts`: 認証処理
+- `lib/db.ts`: DB相当アクセス層
+- `data/db.json`: 永続データ
