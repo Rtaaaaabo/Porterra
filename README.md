@@ -40,6 +40,7 @@ cp .env.example .env
 2. `.env` を更新
 
 - `DATABASE_URL`
+- `AUTH_SECRET`（`openssl rand -base64 32` などで生成）
 - `CLOUDINARY_CLOUD_NAME`
 - `CLOUDINARY_API_KEY`
 - `CLOUDINARY_API_SECRET`
@@ -71,6 +72,7 @@ npm run dev
 
 ## 主なファイル
 
+- `auth.ts`: Auth.js設定（Credentials）
 - `prisma.config.ts`: Prisma 7 datasource設定
 - `prisma/schema.prisma`: PostgreSQLスキーマ
 - `lib/prisma.ts`: Prisma Client

@@ -1,5 +1,4 @@
-import crypto from "node:crypto";
-import type { Session, User } from "@prisma/client";
+import type { User } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { PostDetail, PostFeedItem } from "@/lib/types";
 
@@ -26,27 +25,6 @@ export async function createUser(input: {
       email: input.email,
       passwordHash: input.passwordHash,
     },
-  });
-}
-
-export async function createSession(userId: string): Promise<Session> {
-  return prisma.session.create({
-    data: {
-      userId,
-      token: crypto.randomUUID(),
-    },
-  });
-}
-
-export async function getSessionByToken(token: string): Promise<Session | null> {
-  return prisma.session.findUnique({
-    where: { token },
-  });
-}
-
-export async function deleteSessionByToken(token: string): Promise<void> {
-  await prisma.session.deleteMany({
-    where: { token },
   });
 }
 

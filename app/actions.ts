@@ -1,10 +1,13 @@
 "use server";
 
+import AuthError from "next-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { loginUser, logoutUser, registerUser, requireUser } from "@/lib/auth";
+import { signIn, signOut } from "@/auth";
+import { requireUser } from "@/lib/auth";
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
-import { createPostWithSpotAndImages, toggleLike } from "@/lib/db";
+import { createUser, createPostWithSpotAndImages, findUserByEmail, toggleLike } from "@/lib/db";
+import { hashPassword } from "@/lib/password";
 
 function getString(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -19,19 +22,37 @@ function parseNullableNumber(value: string): number | null {
 
 export async function registerAction(formData: FormData): Promise<void> {
   const name = getString(formData, "name");
-  const email = getString(formData, "email");
+  const email = getString(formData, "email").toLowerCase();
   const password = getString(formData, "password");
 
   if (!name || !email || !password) {
     redirect("/register?error=required");
   }
 
-  const result = await registerUser({ name, email, password });
-  if (!result.ok) {
-    redirect(`/register?error=${encodeURIComponent(result.error)}`);
+  const existing = await findUserByEmail(email);
+  if (existing) {
+    redirect(`/register?error=${encodeURIComponent("このメールアドレスはすでに使用されています。")}`);
   }
 
-  redirect("/");
+  const passwordHash = await hashPassword(password);
+  await createUser({
+    name,
+    email,
+    passwordHash,
+  });
+
+  try {
+    await signIn("credentials", {
+      email,
+      password,
+      redirectTo: "/",
+    });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      redirect(`/register?error=${encodeURIComponent("登録後のログインに失敗しました。")}`);
+    }
+    throw error;
+  }
 }
 
 export async function loginAction(formData: FormData): Promise<void> {
@@ -42,17 +63,22 @@ export async function loginAction(formData: FormData): Promise<void> {
     redirect("/login?error=required");
   }
 
-  const result = await loginUser({ email, password });
-  if (!result.ok) {
-    redirect(`/login?error=${encodeURIComponent(result.error)}`);
+  try {
+    await signIn("credentials", {
+      email,
+      password,
+      redirectTo: "/",
+    });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      redirect("/login?error=メールアドレスまたはパスワードが違います。");
+    }
+    throw error;
   }
-
-  redirect("/");
 }
 
 export async function logoutAction(): Promise<void> {
-  await logoutUser();
-  redirect("/");
+  await signOut({ redirectTo: "/" });
 }
 
 export async function createPostAction(formData: FormData): Promise<void> {
