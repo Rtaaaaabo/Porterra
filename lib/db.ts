@@ -1,6 +1,6 @@
 import type { User } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import type { PostDetail, PostFeedItem } from "@/lib/types";
+import type { PostDetail, PostFeedItem, PostMapPoint } from "@/lib/types";
 
 export async function findUserByEmail(email: string): Promise<User | null> {
   return prisma.user.findUnique({
@@ -157,6 +157,32 @@ export async function deletePostByIdForUser(postId: string, userId: string): Pro
   });
 
   return true;
+}
+
+export async function getPostMapPoints(): Promise<PostMapPoint[]> {
+  const posts = await prisma.post.findMany({
+    where: {
+      spot: {
+        lat: { not: null },
+        lng: { not: null },
+      },
+    },
+    include: {
+      user: true,
+      spot: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return posts.map((post) => ({
+    id: post.id,
+    title: post.title,
+    authorName: post.user.name,
+    spotName: post.spot.name,
+    lat: post.spot.lat as number,
+    lng: post.spot.lng as number,
+    createdAt: post.createdAt.toISOString(),
+  }));
 }
 
 export async function toggleLike(postId: string, userId: string): Promise<void> {

@@ -17,3 +17,13 @@ export type PostDetail = PostFeedItem & {
   lng: number | null;
   hasLiked: boolean;
 };
+
+export type PostMapPoint = {
+  id: string;
+  title: string;
+  authorName: string;
+  spotName: string;
+  lat: number;
+  lng: number;
+  createdAt: string;
+};
