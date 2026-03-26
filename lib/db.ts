@@ -1,14 +1,13 @@
-import type { User } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { PostDetail, PostFeedItem, PostMapPoint } from "@/lib/types";
 
-export async function findUserByEmail(email: string): Promise<User | null> {
+export async function findUserByEmail(email: string) {
   return prisma.user.findUnique({
     where: { email: email.toLowerCase() },
   });
 }
 
-export async function findUserById(id: string): Promise<User | null> {
+export async function findUserById(id: string) {
   return prisma.user.findUnique({
     where: { id },
   });
@@ -18,7 +17,7 @@ export async function createUser(input: {
   name: string;
   email: string;
   passwordHash: string;
-}): Promise<User> {
+}) {
   return prisma.user.create({
     data: {
       name: input.name,
