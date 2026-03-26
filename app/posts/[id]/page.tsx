@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { toggleLikeAction } from "@/app/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { getPostDetail } from "@/lib/db";
+import DeletePostButton from "@/app/posts/[id]/delete-post-button";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -67,6 +68,9 @@ export default async function PostDetailPage({ params }: Props) {
               いいねするにはログイン
             </Link>
           )}
+          {user?.id === post.authorId ? (
+            <DeletePostButton postId={post.id} />
+          ) : null}
         </div>
       </article>
     </main>

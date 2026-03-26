@@ -8,7 +8,7 @@ type Props = {
 
 function readErrorMessage(error: string | undefined): string | null {
   if (!error) return null;
-  if (error === "required") return "タイトル・本文・場所名・国は必須です。";
+  if (error === "required") return "タイトル・本文は必須です。";
   if (error === "image_required") return "画像を1枚以上アップロードしてください。";
   if (error === "upload_failed") return "画像アップロードに失敗しました。Cloudinary設定を確認してください。";
   return error;
@@ -73,42 +73,8 @@ export default async function NewPostPage({ searchParams }: Props) {
           </span>
         </label>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm font-medium text-slate-700">
-            場所名
-            <input
-              name="spotName"
-              type="text"
-              required
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-              placeholder="例: 河口湖"
-            />
-          </label>
-
-          <label className="block text-sm font-medium text-slate-700">
-            都道府県
-            <input
-              name="prefecture"
-              type="text"
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-              placeholder="例: 山梨県"
-            />
-          </label>
-
-          <label className="block text-sm font-medium text-slate-700">
-            国
-            <input
-              name="country"
-              type="text"
-              required
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-              placeholder="例: 日本"
-            />
-          </label>
-        </div>
-
         <p className="text-xs text-slate-500">
-          位置情報は写真のEXIF（GPS）を優先して自動取得します。見つからない場合は場所名から推定します。
+          位置情報は写真のEXIF（GPS）から自動取得し、場所名はMap APIで補完します。
         </p>
 
         <button type="submit" className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700">

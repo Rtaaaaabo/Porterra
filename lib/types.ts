@@ -12,6 +12,7 @@ export type PostFeedItem = {
 };
 
 export type PostDetail = PostFeedItem & {
+  authorId: string;
   lat: number | null;
   lng: number | null;
   hasLiked: boolean;

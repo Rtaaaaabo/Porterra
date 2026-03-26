@@ -6,8 +6,8 @@ import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/auth";
 import { requireUser } from "@/lib/auth";
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
-import { createUser, createPostWithSpotAndImages, findUserByEmail, toggleLike } from "@/lib/db";
-import { extractLatLngFromImage, geocodeSpotName } from "@/lib/location";
+import { createUser, createPostWithSpotAndImages, deletePostByIdForUser, findUserByEmail, toggleLike } from "@/lib/db";
+import { extractLatLngFromImage, reverseGeocodeFromLatLng } from "@/lib/location";
 import { hashPassword } from "@/lib/password";
 
 function getString(formData: FormData, key: string): string {
@@ -81,11 +81,8 @@ export async function createPostAction(formData: FormData): Promise<void> {
 
   const title = getString(formData, "title");
   const body = getString(formData, "body");
-  const spotName = getString(formData, "spotName");
-  const prefecture = getString(formData, "prefecture");
-  const country = getString(formData, "country");
 
-  if (!title || !body || !spotName || !country) {
+  if (!title || !body) {
     redirect("/posts/new?error=required");
   }
 
@@ -117,15 +114,16 @@ export async function createPostAction(formData: FormData): Promise<void> {
     redirect("/posts/new?error=image_required");
   }
 
-  if (detectedLat === null || detectedLng === null) {
-    const geocoded = await geocodeSpotName({
-      spotName,
-      prefecture,
-      country,
-    });
-    if (geocoded) {
-      detectedLat = geocoded.lat;
-      detectedLng = geocoded.lng;
+  let spotName = "不明な場所";
+  let prefecture = "";
+  let country = "不明";
+
+  if (detectedLat !== null && detectedLng !== null) {
+    const resolved = await reverseGeocodeFromLatLng({ lat: detectedLat, lng: detectedLng });
+    if (resolved) {
+      spotName = resolved.name;
+      prefecture = resolved.prefecture;
+      country = resolved.country;
     }
   }
 
@@ -159,4 +157,21 @@ export async function toggleLikeAction(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath(`/posts/${postId}`);
   redirect(`/posts/${postId}`);
+}
+
+export async function deletePostAction(formData: FormData): Promise<void> {
+  const user = await requireUser();
+  const postId = getString(formData, "postId");
+
+  if (!postId) {
+    redirect("/");
+  }
+
+  const deleted = await deletePostByIdForUser(postId, user.id);
+  if (!deleted) {
+    redirect(`/posts/${postId}`);
+  }
+
+  revalidatePath("/");
+  redirect("/");
 }

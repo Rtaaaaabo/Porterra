@@ -123,6 +123,7 @@ export async function getPostDetail(postId: string, viewerUserId?: string): Prom
     title: post.title,
     body: post.body,
     createdAt: post.createdAt.toISOString(),
+    authorId: post.userId,
     authorName: post.user.name,
     spotName: post.spot.name,
     prefecture: post.spot.prefecture,
@@ -133,6 +134,29 @@ export async function getPostDetail(postId: string, viewerUserId?: string): Prom
     likeCount: post.likes.length,
     hasLiked: viewerUserId ? post.likes.some((like) => like.userId === viewerUserId) : false,
   };
+}
+
+export async function deletePostByIdForUser(postId: string, userId: string): Promise<boolean> {
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    select: { id: true, userId: true, spotId: true },
+  });
+
+  if (!post || post.userId !== userId) {
+    return false;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.post.delete({
+      where: { id: postId },
+    });
+
+    await tx.spot.deleteMany({
+      where: { id: post.spotId },
+    });
+  });
+
+  return true;
 }
 
 export async function toggleLike(postId: string, userId: string): Promise<void> {

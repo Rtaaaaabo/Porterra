@@ -5,6 +5,12 @@ export type LatLng = {
   lng: number;
 };
 
+export type SpotNameResult = {
+  name: string;
+  prefecture: string;
+  country: string;
+};
+
 export async function extractLatLngFromImage(file: File): Promise<LatLng | null> {
   const buffer = Buffer.from(await file.arrayBuffer());
   const gps = (await exifr.gps(buffer)) as { latitude?: number; longitude?: number } | null;
@@ -61,6 +67,62 @@ export async function geocodeSpotName(input: {
     }
 
     return { lat, lng };
+  } catch {
+    return null;
+  }
+}
+
+export async function reverseGeocodeFromLatLng(input: LatLng): Promise<SpotNameResult | null> {
+  const url =
+    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=16&addressdetails=1` +
+    `&lat=${encodeURIComponent(String(input.lat))}&lon=${encodeURIComponent(String(input.lng))}`;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Porterra/0.1 (Next.js App)",
+      },
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as {
+      name?: string;
+      display_name?: string;
+      address?: {
+        state?: string;
+        province?: string;
+        county?: string;
+        city?: string;
+        town?: string;
+        village?: string;
+        country?: string;
+      };
+    };
+
+    const address = payload.address;
+    const spotName =
+      payload.name ??
+      address?.city ??
+      address?.town ??
+      address?.village ??
+      address?.county ??
+      payload.display_name?.split(",")[0]?.trim();
+
+    const prefecture = address?.state ?? address?.province ?? address?.county ?? "";
+    const country = address?.country ?? "";
+
+    if (!spotName || !country) {
+      return null;
+    }
+
+    return {
+      name: spotName,
+      prefecture,
+      country,
+    };
   } catch {
     return null;
   }
