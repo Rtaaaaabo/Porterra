@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { registerAction } from "@/app/actions";
+import FormSubmitButton from "@/app/components/form-submit-button";
 import { getCurrentUser } from "@/lib/auth";
 
 type Props = {
@@ -58,9 +59,11 @@ export default async function RegisterPage({ searchParams }: Props) {
           <input name="password" type="password" required className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" />
         </label>
 
-        <button type="submit" className="w-full rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700">
-          アカウント作成
-        </button>
+        <FormSubmitButton
+          idleText="アカウント作成"
+          pendingText="作成中..."
+          className="w-full rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700"
+        />
       </form>
 
       <p className="mt-4 text-sm text-slate-600">

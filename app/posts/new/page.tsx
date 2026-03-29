@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createPostAction } from "@/app/actions";
+import FormSubmitButton from "@/app/components/form-submit-button";
 import { requireUser } from "@/lib/auth";
 
 type Props = {
@@ -77,9 +78,11 @@ export default async function NewPostPage({ searchParams }: Props) {
           位置情報は写真のEXIF（GPS）から自動取得し、場所名はMap APIで補完します。
         </p>
 
-        <button type="submit" className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700">
-          投稿する
-        </button>
+        <FormSubmitButton
+          idleText="投稿する"
+          pendingText="投稿中..."
+          className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700"
+        />
       </form>
     </main>
   );

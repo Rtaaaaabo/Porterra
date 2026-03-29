@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { toggleLikeAction } from "@/app/actions";
+import FormSubmitButton from "@/app/components/form-submit-button";
 import { getCurrentUser } from "@/lib/auth";
 import { getPostDetail } from "@/lib/db";
 import DeletePostButton from "@/app/posts/[id]/delete-post-button";
@@ -56,12 +57,11 @@ export default async function PostDetailPage({ params }: Props) {
           {user ? (
             <form action={toggleLikeAction}>
               <input type="hidden" name="postId" value={post.id} />
-              <button
-                type="submit"
+              <FormSubmitButton
+                idleText={post.hasLiked ? "いいねを取り消す" : "いいね"}
+                pendingText="送信中..."
                 className="rounded-md border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                {post.hasLiked ? "いいねを取り消す" : "いいね"}
-              </button>
+              />
             </form>
           ) : (
             <Link href="/login" className="text-sm font-semibold text-sky-700 hover:text-sky-800">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { logoutAction } from "@/app/actions";
+import FormSubmitButton from "@/app/components/form-submit-button";
 import { getCurrentUser } from "@/lib/auth";
 import { getPostFeed } from "@/lib/db";
 
@@ -34,12 +35,11 @@ export default async function HomePage() {
                 投稿する
               </Link>
               <form action={logoutAction}>
-                <button
-                  type="submit"
+                <FormSubmitButton
+                  idleText="ログアウト"
+                  pendingText="ログアウト中..."
                   className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                >
-                  ログアウト
-                </button>
+                />
               </form>
             </>
           ) : (

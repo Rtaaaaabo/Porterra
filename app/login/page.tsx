@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { loginAction } from "@/app/actions";
+import FormSubmitButton from "@/app/components/form-submit-button";
 import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -47,9 +48,11 @@ export default async function LoginPage({ searchParams }: Props) {
           <input name="password" type="password" required className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" />
         </label>
 
-        <button type="submit" className="w-full rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700">
-          ログイン
-        </button>
+        <FormSubmitButton
+          idleText="ログイン"
+          pendingText="ログイン中..."
+          className="w-full rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700"
+        />
       </form>
 
       <p className="mt-4 text-sm text-slate-600">
