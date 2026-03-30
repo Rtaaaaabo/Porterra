@@ -10,9 +10,35 @@ import { createUser, createPostWithSpotAndImages, deletePostByIdForUser, findUse
 import { extractLatLngFromImage, reverseGeocodeFromLatLng } from "@/lib/location";
 import { hashPassword } from "@/lib/password";
 
+const SUPPORTED_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+  "image/avif",
+]);
+
+const SUPPORTED_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "heic", "heif", "avif"]);
+
 function getString(formData: FormData, key: string): string {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
+}
+
+function getExtension(fileName: string): string {
+  const ext = fileName.split(".").pop();
+  return ext ? ext.toLowerCase() : "";
+}
+
+function isSupportedImageFile(file: File): boolean {
+  const mime = file.type.toLowerCase();
+  if (SUPPORTED_IMAGE_MIME_TYPES.has(mime)) {
+    return true;
+  }
+  const ext = getExtension(file.name);
+  return SUPPORTED_IMAGE_EXTENSIONS.has(ext);
 }
 
 export async function registerAction(formData: FormData): Promise<void> {
@@ -94,6 +120,9 @@ export async function createPostAction(formData: FormData): Promise<void> {
   for (const item of files) {
     if (!(item instanceof File)) continue;
     if (!item.name || item.size === 0) continue;
+    if (!isSupportedImageFile(item)) {
+      redirect("/posts/new?error=unsupported_image");
+    }
     if (detectedLat === null || detectedLng === null) {
       const gps = await extractLatLngFromImage(item);
       if (gps) {

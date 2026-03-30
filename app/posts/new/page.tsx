@@ -12,6 +12,7 @@ function readErrorMessage(error: string | undefined): string | null {
   if (error === "required") return "タイトル・本文は必須です。";
   if (error === "image_required") return "画像を1枚以上アップロードしてください。";
   if (error === "upload_failed") return "画像アップロードに失敗しました。Cloudinary設定を確認してください。";
+  if (error === "unsupported_image") return "対応していない画像形式です。JPG / PNG / WEBP / HEIC を選択してください。";
   return error;
 }
 
@@ -65,12 +66,12 @@ export default async function NewPostPage({ searchParams }: Props) {
             <input
               name="images"
               type="file"
-              accept="image/*"
+              accept="image/*,.heic,.heif"
               multiple
               required
               className="w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-sky-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-sky-700"
             />
-            <span className="mt-2 block text-xs text-slate-500">複数選択可（JPG / PNG / WEBP など）</span>
+            <span className="mt-2 block text-xs text-slate-500">複数選択可（JPG / PNG / WEBP / HEIC など）</span>
           </span>
         </label>
 

@@ -17,16 +17,35 @@ function buildSignature(params: Record<string, string>, apiSecret: string): stri
   return crypto.createHash("sha1").update(`${query}${apiSecret}`).digest("hex");
 }
 
+function getExtension(fileName: string): string {
+  const ext = fileName.split(".").pop();
+  return ext ? ext.toLowerCase() : "";
+}
+
+function isHeicLike(file: File): boolean {
+  const mime = file.type.toLowerCase();
+  const ext = getExtension(file.name);
+  return mime === "image/heic" || mime === "image/heif" || ext === "heic" || ext === "heif";
+}
+
+function buildOptimizedDeliveryUrl(url: string): string {
+  return url.replace("/image/upload/", "/image/upload/f_auto,q_auto/");
+}
+
 export async function uploadImageToCloudinary(file: File): Promise<string> {
   const cloudName = requireEnv("CLOUDINARY_CLOUD_NAME");
   const apiKey = requireEnv("CLOUDINARY_API_KEY");
   const apiSecret = requireEnv("CLOUDINARY_API_SECRET");
   const folder = process.env.CLOUDINARY_FOLDER?.trim();
+  const format = isHeicLike(file) ? "jpg" : undefined;
 
   const timestamp = String(Math.floor(Date.now() / 1000));
   const signParams: Record<string, string> = { timestamp };
   if (folder) {
     signParams.folder = folder;
+  }
+  if (format) {
+    signParams.format = format;
   }
 
   const signature = buildSignature(signParams, apiSecret);
@@ -38,6 +57,9 @@ export async function uploadImageToCloudinary(file: File): Promise<string> {
   uploadForm.append("signature", signature);
   if (folder) {
     uploadForm.append("folder", folder);
+  }
+  if (format) {
+    uploadForm.append("format", format);
   }
 
   const endpoint = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
@@ -56,5 +78,5 @@ export async function uploadImageToCloudinary(file: File): Promise<string> {
     throw new Error("Cloudinary upload failed: secure_url not found");
   }
 
-  return payload.secure_url;
+  return buildOptimizedDeliveryUrl(payload.secure_url);
 }
