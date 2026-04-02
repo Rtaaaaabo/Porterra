@@ -47,6 +47,8 @@ cp .env.example .env
 2. `.env` を更新
 
 - `DATABASE_URL`
+  - `sslmode=require` / `prefer` / `verify-ca` を使っている場合は、`sslmode=verify-full` を推奨（本プロジェクト内でも自動補正）
+  - 互換モードを使いたい場合は `uselibpqcompat=true&sslmode=require` を指定
 - `AUTH_SECRET`（`openssl rand -base64 32` などで生成）
 - `CLOUDINARY_CLOUD_NAME`
 - `CLOUDINARY_API_KEY`

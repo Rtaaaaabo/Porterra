@@ -1,8 +1,10 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
+import { normalizeDatabaseUrl } from "./lib/database-url";
 
-const databaseUrl =
+const rawDatabaseUrl =
   process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/porterra?schema=public";
+const databaseUrl = normalizeDatabaseUrl(rawDatabaseUrl);
 
 export default defineConfig({
   schema: "prisma/schema.prisma",

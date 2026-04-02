@@ -95,12 +95,17 @@ export async function getPostFeed(): Promise<PostFeedItem[]> {
     spotName: post.spot.name,
     prefecture: post.spot.prefecture,
     country: post.spot.country,
+    lat: post.spot.lat,
+    lng: post.spot.lng,
     imageUrls: post.images.map((img) => img.imageUrl),
     likeCount: post._count.likes,
   }));
 }
 
-export async function getPostDetail(postId: string, viewerUserId?: string): Promise<PostDetail | null> {
+export async function getPostDetail(
+  postId: string,
+  viewerUserId?: string,
+): Promise<PostDetail | null> {
   const post = await prisma.post.findUnique({
     where: { id: postId },
     include: {
@@ -131,11 +136,16 @@ export async function getPostDetail(postId: string, viewerUserId?: string): Prom
     lng: post.spot.lng,
     imageUrls: post.images.map((img) => img.imageUrl),
     likeCount: post.likes.length,
-    hasLiked: viewerUserId ? post.likes.some((like) => like.userId === viewerUserId) : false,
+    hasLiked: viewerUserId
+      ? post.likes.some((like) => like.userId === viewerUserId)
+      : false,
   };
 }
 
-export async function deletePostByIdForUser(postId: string, userId: string): Promise<boolean> {
+export async function deletePostByIdForUser(
+  postId: string,
+  userId: string,
+): Promise<boolean> {
   const post = await prisma.post.findUnique({
     where: { id: postId },
     select: { id: true, userId: true, spotId: true },
@@ -178,13 +188,18 @@ export async function getPostMapPoints(): Promise<PostMapPoint[]> {
     title: post.title,
     authorName: post.user.name,
     spotName: post.spot.name,
+    prefecture: post.spot.prefecture,
+    country: post.spot.country,
     lat: post.spot.lat as number,
     lng: post.spot.lng as number,
     createdAt: post.createdAt.toISOString(),
   }));
 }
 
-export async function toggleLike(postId: string, userId: string): Promise<void> {
+export async function toggleLike(
+  postId: string,
+  userId: string,
+): Promise<void> {
   const existing = await prisma.like.findUnique({
     where: {
       postId_userId: {

@@ -3,6 +3,7 @@ import { logoutAction } from "@/app/actions";
 import FormSubmitButton from "@/app/components/form-submit-button";
 import { getCurrentUser } from "@/lib/auth";
 import { getPostFeed } from "@/lib/db";
+import { resolveSpotLabel } from "@/lib/spot-label";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString("ja-JP");
@@ -10,6 +11,18 @@ function formatDate(iso: string): string {
 
 export default async function HomePage() {
   const [user, feed] = await Promise.all([getCurrentUser(), getPostFeed()]);
+  const feedWithSpotLabel = await Promise.all(
+    feed.map(async (post) => ({
+      ...post,
+      spotLabel: await resolveSpotLabel({
+        spotName: post.spotName,
+        prefecture: post.prefecture,
+        country: post.country,
+        lat: post.lat,
+        lng: post.lng,
+      }),
+    })),
+  );
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-10">
@@ -61,40 +74,41 @@ export default async function HomePage() {
         </div>
       </header>
 
-      {feed.length === 0 ? (
+      {feedWithSpotLabel.length === 0 ? (
         <section className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
           まだ投稿がありません。最初の旅先をシェアしてみましょう。
         </section>
       ) : (
         <section className="grid gap-5">
-          {feed.map((post) => (
-            <article key={post.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              {post.imageUrls[0] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={post.imageUrls[0]}
-                  alt={post.title}
-                  className="h-56 w-full object-cover"
-                />
-              ) : null}
-              <div className="space-y-3 p-5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-xl font-bold text-slate-900">{post.title}</h2>
-                  <span className="text-xs text-slate-500">{formatDate(post.createdAt)}</span>
+          {feedWithSpotLabel.map((post) => (
+            <Link
+              key={post.id}
+              href={`/posts/${post.id}`}
+              className="group block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            >
+              <article>
+                {post.imageUrls[0] ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={post.imageUrls[0]}
+                    alt={post.title}
+                    className="h-56 w-full object-cover"
+                  />
+                ) : null}
+                <div className="space-y-3 p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="text-xl font-bold text-slate-900">{post.title}</h2>
+                    <span className="text-xs text-slate-500">{formatDate(post.createdAt)}</span>
+                  </div>
+                  <p className="line-clamp-2 text-sm text-slate-700">{post.body}</p>
+                  <div className="text-sm text-slate-600">
+                    <p>📍 {post.spotLabel}</p>
+                    <p>投稿者: {post.authorName}</p>
+                    <p>いいね: {post.likeCount}</p>
+                  </div>
                 </div>
-                <p className="line-clamp-2 text-sm text-slate-700">{post.body}</p>
-                <div className="text-sm text-slate-600">
-                  <p>
-                    📍 {post.spotName} / {post.prefecture || "-"} / {post.country}
-                  </p>
-                  <p>投稿者: {post.authorName}</p>
-                  <p>いいね: {post.likeCount}</p>
-                </div>
-                <Link href={`/posts/${post.id}`} className="inline-block text-sm font-semibold text-sky-700 hover:text-sky-800">
-                  投稿詳細を見る →
-                </Link>
-              </div>
-            </article>
+              </article>
+            </Link>
           ))}
         </section>
       )}

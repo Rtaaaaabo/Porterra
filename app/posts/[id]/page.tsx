@@ -4,6 +4,7 @@ import { toggleLikeAction } from "@/app/actions";
 import FormSubmitButton from "@/app/components/form-submit-button";
 import { getCurrentUser } from "@/lib/auth";
 import { getPostDetail } from "@/lib/db";
+import { resolveSpotLabel } from "@/lib/spot-label";
 import DeletePostButton from "@/app/posts/[id]/delete-post-button";
 
 type Props = {
@@ -23,6 +24,14 @@ export default async function PostDetailPage({ params }: Props) {
     notFound();
   }
 
+  const spotLabel = await resolveSpotLabel({
+    spotName: post.spotName,
+    prefecture: post.prefecture,
+    country: post.country,
+    lat: post.lat,
+    lng: post.lng,
+  });
+
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-10">
       <Link href="/" className="mb-6 inline-block text-sm font-semibold text-sky-700 hover:text-sky-800">
@@ -33,14 +42,7 @@ export default async function PostDetailPage({ params }: Props) {
         <header className="space-y-2">
           <h1 className="text-3xl font-bold text-slate-900">{post.title}</h1>
           <p className="text-sm text-slate-600">{formatDate(post.createdAt)} / 投稿者: {post.authorName}</p>
-          <p className="text-sm text-slate-700">
-            📍 {post.spotName} / {post.prefecture || "-"} / {post.country}
-          </p>
-          {post.lat !== null && post.lng !== null ? (
-            <p className="text-xs text-slate-500">
-              座標: {post.lat}, {post.lng}
-            </p>
-          ) : null}
+          <p className="text-sm text-slate-700">📍 {spotLabel}</p>
         </header>
 
         <p className="whitespace-pre-wrap text-slate-800">{post.body}</p>

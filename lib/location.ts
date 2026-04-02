@@ -5,24 +5,42 @@ export type LatLng = {
   lng: number;
 };
 
+const COORD_DECIMALS = 6;
+
+function roundCoordinate(value: number): number {
+  return Number(value.toFixed(COORD_DECIMALS));
+}
+
+export function normalizeLatLng(input: LatLng): LatLng {
+  return {
+    lat: roundCoordinate(input.lat),
+    lng: roundCoordinate(input.lng),
+  };
+}
+
 export type SpotNameResult = {
   name: string;
   prefecture: string;
   country: string;
 };
 
-export async function extractLatLngFromImage(file: File): Promise<LatLng | null> {
+export async function extractLatLngFromImage(
+  file: File,
+): Promise<LatLng | null> {
   const buffer = Buffer.from(await file.arrayBuffer());
-  const gps = (await exifr.gps(buffer)) as { latitude?: number; longitude?: number } | null;
+  const gps = (await exifr.gps(buffer)) as {
+    latitude?: number;
+    longitude?: number;
+  } | null;
 
-  if (!gps?.latitude || !gps?.longitude) {
+  if (gps?.latitude == null || gps?.longitude == null) {
     return null;
   }
 
-  return {
+  return normalizeLatLng({
     lat: gps.latitude,
     lng: gps.longitude,
-  };
+  });
 }
 
 export async function geocodeSpotName(input: {
@@ -53,7 +71,10 @@ export async function geocodeSpotName(input: {
       return null;
     }
 
-    const data = (await response.json()) as Array<{ lat?: string; lon?: string }>;
+    const data = (await response.json()) as Array<{
+      lat?: string;
+      lon?: string;
+    }>;
     const first = data[0];
     if (!first?.lat || !first?.lon) {
       return null;
@@ -72,10 +93,13 @@ export async function geocodeSpotName(input: {
   }
 }
 
-export async function reverseGeocodeFromLatLng(input: LatLng): Promise<SpotNameResult | null> {
+export async function reverseGeocodeFromLatLng(
+  input: LatLng,
+): Promise<SpotNameResult | null> {
+  const normalized = normalizeLatLng(input);
   const url =
     `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=16&addressdetails=1` +
-    `&lat=${encodeURIComponent(String(input.lat))}&lon=${encodeURIComponent(String(input.lng))}`;
+    `&lat=${encodeURIComponent(String(normalized.lat))}&lon=${encodeURIComponent(String(normalized.lng))}`;
 
   try {
     const response = await fetch(url, {
@@ -98,21 +122,36 @@ export async function reverseGeocodeFromLatLng(input: LatLng): Promise<SpotNameR
         city?: string;
         town?: string;
         village?: string;
+        suburb?: string;
+        neighbourhood?: string;
+        hamlet?: string;
         country?: string;
       };
     };
 
     const address = payload.address;
-    const spotName =
-      payload.name ??
-      address?.city ??
-      address?.town ??
-      address?.village ??
-      address?.county ??
-      payload.display_name?.split(",")[0]?.trim();
+    const spotNameCandidates = [
+      payload.name,
+      address?.city,
+      address?.town,
+      address?.village,
+      address?.suburb,
+      address?.neighbourhood,
+      address?.hamlet,
+      address?.county,
+      payload.display_name?.split(",")[0],
+    ];
+    const spotName = spotNameCandidates
+      .map((value) => value?.trim())
+      .find((value): value is string => Boolean(value));
 
-    const prefecture = address?.state ?? address?.province ?? address?.county ?? "";
-    const country = address?.country ?? "";
+    const prefecture = (
+      address?.state ??
+      address?.province ??
+      address?.county ??
+      ""
+    ).trim();
+    const country = (address?.country ?? "").trim();
 
     if (!spotName || !country) {
       return null;

@@ -6,8 +6,17 @@ import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/auth";
 import { requireUser } from "@/lib/auth";
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
-import { createUser, createPostWithSpotAndImages, deletePostByIdForUser, findUserByEmail, toggleLike } from "@/lib/db";
-import { extractLatLngFromImage, reverseGeocodeFromLatLng } from "@/lib/location";
+import {
+  createUser,
+  createPostWithSpotAndImages,
+  deletePostByIdForUser,
+  findUserByEmail,
+  toggleLike,
+} from "@/lib/db";
+import {
+  extractLatLngFromImage,
+  reverseGeocodeFromLatLng,
+} from "@/lib/location";
 import { hashPassword } from "@/lib/password";
 
 const SUPPORTED_IMAGE_MIME_TYPES = new Set([
@@ -20,7 +29,15 @@ const SUPPORTED_IMAGE_MIME_TYPES = new Set([
   "image/avif",
 ]);
 
-const SUPPORTED_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "heic", "heif", "avif"]);
+const SUPPORTED_IMAGE_EXTENSIONS = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "heic",
+  "heif",
+  "avif",
+]);
 
 function getString(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -52,7 +69,9 @@ export async function registerAction(formData: FormData): Promise<void> {
 
   const existing = await findUserByEmail(email);
   if (existing) {
-    redirect(`/register?error=${encodeURIComponent("このメールアドレスはすでに使用されています。")}`);
+    redirect(
+      `/register?error=${encodeURIComponent("このメールアドレスはすでに使用されています。")}`,
+    );
   }
 
   const passwordHash = await hashPassword(password);
@@ -70,7 +89,9 @@ export async function registerAction(formData: FormData): Promise<void> {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      redirect(`/register?error=${encodeURIComponent("登録後のログインに失敗しました。")}`);
+      redirect(
+        `/register?error=${encodeURIComponent("登録後のログインに失敗しました。")}`,
+      );
     }
     throw error;
   }
@@ -148,7 +169,10 @@ export async function createPostAction(formData: FormData): Promise<void> {
   let country = "不明";
 
   if (detectedLat !== null && detectedLng !== null) {
-    const resolved = await reverseGeocodeFromLatLng({ lat: detectedLat, lng: detectedLng });
+    const resolved = await reverseGeocodeFromLatLng({
+      lat: detectedLat,
+      lng: detectedLng,
+    });
     if (resolved) {
       spotName = resolved.name;
       prefecture = resolved.prefecture;

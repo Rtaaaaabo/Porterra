@@ -15,7 +15,7 @@ export default function FormSubmitButton({ idleText, pendingText = "送信中...
     <button
       type="submit"
       disabled={pending}
-      aria-busy={pending}
+      aria-busy={pending ? "true" : "false"}
       className={`${className ?? ""} disabled:cursor-not-allowed disabled:opacity-70`}
     >
       {pending ? pendingText : idleText}

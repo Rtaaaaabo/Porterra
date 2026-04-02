@@ -7,6 +7,8 @@ export type PostFeedItem = {
   spotName: string;
   prefecture: string;
   country: string;
+  lat: number | null;
+  lng: number | null;
   imageUrls: string[];
   likeCount: number;
 };
@@ -23,6 +25,8 @@ export type PostMapPoint = {
   title: string;
   authorName: string;
   spotName: string;
+  prefecture: string;
+  country: string;
   lat: number;
   lng: number;
   createdAt: string;
