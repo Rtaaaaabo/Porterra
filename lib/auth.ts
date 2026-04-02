@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { isEmailAllowedInProduction } from "@/lib/access-control";
 
 export type CurrentUser = {
   id: string;
@@ -12,6 +13,9 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   const user = session?.user;
 
   if (!user?.id || !user.email || !user.name) {
+    return null;
+  }
+  if (!isEmailAllowedInProduction(user.email)) {
     return null;
   }
 

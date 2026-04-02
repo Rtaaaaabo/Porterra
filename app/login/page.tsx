@@ -11,6 +11,7 @@ type Props = {
 function readErrorMessage(error: string | undefined): string | null {
   if (!error) return null;
   if (error === "required") return "メールアドレスとパスワードを入力してください。";
+  if (error === "forbidden") return "この環境では許可されたアカウントのみログインできます。";
   return error;
 }
 

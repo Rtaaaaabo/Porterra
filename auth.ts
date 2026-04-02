@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { isEmailAllowedInProduction } from "@/lib/access-control";
 import { findUserByEmail } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
 
@@ -18,6 +19,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const password = typeof credentials?.password === "string" ? credentials.password : "";
 
         if (!email || !password) {
+          return null;
+        }
+        if (!isEmailAllowedInProduction(email)) {
           return null;
         }
 

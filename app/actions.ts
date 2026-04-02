@@ -4,6 +4,7 @@ import AuthError from "next-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/auth";
+import { isEmailAllowedInProduction } from "@/lib/access-control";
 import { requireUser } from "@/lib/auth";
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
 import {
@@ -66,6 +67,9 @@ export async function registerAction(formData: FormData): Promise<void> {
   if (!name || !email || !password) {
     redirect("/register?error=required");
   }
+  if (!isEmailAllowedInProduction(email)) {
+    redirect("/register?error=forbidden");
+  }
 
   const existing = await findUserByEmail(email);
   if (existing) {
@@ -103,6 +107,9 @@ export async function loginAction(formData: FormData): Promise<void> {
 
   if (!email || !password) {
     redirect("/login?error=required");
+  }
+  if (!isEmailAllowedInProduction(email)) {
+    redirect("/login?error=forbidden");
   }
 
   try {

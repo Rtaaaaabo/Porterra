@@ -50,6 +50,8 @@ cp .env.example .env
   - `sslmode=require` / `prefer` / `verify-ca` を使っている場合は、`sslmode=verify-full` を推奨（本プロジェクト内でも自動補正）
   - 互換モードを使いたい場合は `uselibpqcompat=true&sslmode=require` を指定
 - `AUTH_SECRET`（`openssl rand -base64 32` などで生成）
+- `PRODUCTION_ACCESS_RESTRICT`（本番アクセス制限を有効化するなら `true`）
+- `PRODUCTION_ALLOWED_EMAILS`（許可メールを`,`区切りで指定。例: `admin@example.com,owner@example.com`）
 - `CLOUDINARY_CLOUD_NAME`
 - `CLOUDINARY_API_KEY`
 - `CLOUDINARY_API_SECRET`
@@ -82,10 +84,20 @@ npm run dev
 ## 主なファイル
 
 - `auth.ts`: Auth.js設定（Credentials）
+- `proxy.ts`: 本番アクセス制限（Next.js 16 Proxy）
 - `prisma.config.ts`: Prisma 7 datasource設定
 - `prisma/schema.prisma`: PostgreSQLスキーマ
 - `lib/prisma.ts`: Prisma Client
 - `lib/db.ts`: DBアクセス層
 - `lib/cloudinary.ts`: Cloudinaryアップロード
 - `lib/auth.ts`: 認証処理
+- `lib/access-control.ts`: 本番アクセス制限ロジック
 - `app/actions.ts`: Server Actions
+
+## 本番アクセス制限
+
+本番環境で `PRODUCTION_ACCESS_RESTRICT=true` の場合、`PRODUCTION_ALLOWED_EMAILS` に含まれるメールアドレスのみアクセス可能になります。
+
+- 未ログインユーザーは `/login` にリダイレクト
+- 許可されていないメールはログイン/登録不可
+- `PRODUCTION_ALLOWED_EMAILS` が空のまま有効化した場合は、全員アクセス不可になります
