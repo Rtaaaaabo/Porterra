@@ -7,6 +7,8 @@ import { getPostDetail } from "@/lib/db";
 import { resolveSpotLabel } from "@/lib/spot-label";
 import DeletePostButton from "@/app/posts/[id]/delete-post-button";
 
+export const dynamic = "force-dynamic";
+
 type Props = {
   params: Promise<{ id: string }>;
 };

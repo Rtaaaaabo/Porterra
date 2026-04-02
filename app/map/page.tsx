@@ -3,6 +3,8 @@ import MapClient from "@/app/map/map-client";
 import { getPostMapPoints } from "@/lib/db";
 import { resolveSpotLabel } from "@/lib/spot-label";
 
+export const dynamic = "force-dynamic";
+
 export default async function MapPage() {
   const points = await getPostMapPoints();
   const pointsWithSpotLabel = await Promise.all(

@@ -5,6 +5,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { getPostFeed } from "@/lib/db";
 import { resolveSpotLabel } from "@/lib/spot-label";
 
+export const dynamic = "force-dynamic";
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString("ja-JP");
 }
