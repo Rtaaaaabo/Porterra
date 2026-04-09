@@ -2,6 +2,7 @@ import Link from "next/link";
 import { loginAction } from "@/app/actions";
 import FormSubmitButton from "@/app/components/form-submit-button";
 import { getCurrentUser } from "@/lib/auth";
+import { isProductionAccessRestrictionEnabled } from "@/lib/access-control";
 import { redirect } from "next/navigation";
 
 type Props = {
@@ -17,6 +18,7 @@ function readErrorMessage(error: string | undefined): string | null {
 
 export default async function LoginPage({ searchParams }: Props) {
   const user = await getCurrentUser();
+  const accessRestricted = isProductionAccessRestrictionEnabled();
   if (user) {
     redirect("/");
   }
@@ -56,12 +58,16 @@ export default async function LoginPage({ searchParams }: Props) {
         />
       </form>
 
-      <p className="mt-4 text-sm text-slate-600">
-        アカウント未登録の方は
-        <Link href="/register" className="ml-1 font-semibold text-sky-700 hover:text-sky-800">
-          新規登録
-        </Link>
-      </p>
+      {accessRestricted ? (
+        <p className="mt-4 text-sm text-slate-600">この環境では許可済みアカウントのみログインできます。</p>
+      ) : (
+        <p className="mt-4 text-sm text-slate-600">
+          アカウント未登録の方は
+          <Link href="/register" className="ml-1 font-semibold text-sky-700 hover:text-sky-800">
+            新規登録
+          </Link>
+        </p>
+      )}
     </main>
   );
 }

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import MapClient from "@/app/map/map-client";
+import { requireUserWhenAccessRestricted } from "@/lib/auth";
 import { getPostMapPoints } from "@/lib/db";
 import { resolveSpotLabel } from "@/lib/spot-label";
 
 export const dynamic = "force-dynamic";
 
 export default async function MapPage() {
+  await requireUserWhenAccessRestricted();
   const points = await getPostMapPoints();
   const pointsWithSpotLabel = await Promise.all(
     points.map(async (point) => ({

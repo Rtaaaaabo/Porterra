@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { isEmailAllowedInProduction } from "@/lib/access-control";
+import { isEmailAllowedInProduction, isProductionAccessRestrictionEnabled } from "@/lib/access-control";
 
 export type CurrentUser = {
   id: string;
@@ -30,6 +30,14 @@ export async function requireUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) {
     redirect("/login");
+  }
+  return user;
+}
+
+export async function requireUserWhenAccessRestricted(): Promise<CurrentUser | null> {
+  const user = await getCurrentUser();
+  if (!user && isProductionAccessRestrictionEnabled()) {
+    redirect("/login?error=forbidden");
   }
   return user;
 }

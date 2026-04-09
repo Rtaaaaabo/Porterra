@@ -2,22 +2,23 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { isEmailAllowedInProduction, isProductionAccessRestrictionEnabled } from "@/lib/access-control";
 
-function isPublicPath(pathname: string): boolean {
+function isPublicPath(pathname: string, accessRestricted: boolean): boolean {
   if (pathname.startsWith("/_next")) return true;
   if (pathname.startsWith("/api/auth")) return true;
   if (pathname === "/favicon.ico") return true;
   if (pathname === "/login") return true;
-  if (pathname === "/register") return true;
+  if (!accessRestricted && pathname === "/register") return true;
   return /\.[^/]+$/.test(pathname);
 }
 
 export default auth((request) => {
-  if (!isProductionAccessRestrictionEnabled()) {
+  const accessRestricted = isProductionAccessRestrictionEnabled();
+  if (!accessRestricted) {
     return NextResponse.next();
   }
 
   const { pathname } = request.nextUrl;
-  if (isPublicPath(pathname)) {
+  if (isPublicPath(pathname, accessRestricted)) {
     return NextResponse.next();
   }
 

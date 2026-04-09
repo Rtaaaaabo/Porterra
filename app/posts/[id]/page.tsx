@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { toggleLikeAction } from "@/app/actions";
 import FormSubmitButton from "@/app/components/form-submit-button";
-import { getCurrentUser } from "@/lib/auth";
+import { requireUserWhenAccessRestricted } from "@/lib/auth";
 import { getPostDetail } from "@/lib/db";
 import { resolveSpotLabel } from "@/lib/spot-label";
 import DeletePostButton from "@/app/posts/[id]/delete-post-button";
@@ -19,7 +19,7 @@ function formatDate(iso: string): string {
 
 export default async function PostDetailPage({ params }: Props) {
   const { id } = await params;
-  const user = await getCurrentUser();
+  const user = await requireUserWhenAccessRestricted();
   const post = await getPostDetail(id, user?.id);
 
   if (!post) {

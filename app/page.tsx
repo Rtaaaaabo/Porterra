@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { logoutAction } from "@/app/actions";
 import FormSubmitButton from "@/app/components/form-submit-button";
-import { getCurrentUser } from "@/lib/auth";
+import { requireUserWhenAccessRestricted } from "@/lib/auth";
 import { getPostFeed } from "@/lib/db";
 import { resolveSpotLabel } from "@/lib/spot-label";
 
@@ -12,7 +12,7 @@ function formatDate(iso: string): string {
 }
 
 export default async function HomePage() {
-  const [user, feed] = await Promise.all([getCurrentUser(), getPostFeed()]);
+  const [user, feed] = await Promise.all([requireUserWhenAccessRestricted(), getPostFeed()]);
   const feedWithSpotLabel = await Promise.all(
     feed.map(async (post) => ({
       ...post,

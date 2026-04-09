@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { registerAction } from "@/app/actions";
 import FormSubmitButton from "@/app/components/form-submit-button";
 import { getCurrentUser } from "@/lib/auth";
+import { isProductionAccessRestrictionEnabled } from "@/lib/access-control";
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -16,6 +17,10 @@ function readErrorMessage(error: string | undefined): string | null {
 }
 
 export default async function RegisterPage({ searchParams }: Props) {
+  if (isProductionAccessRestrictionEnabled()) {
+    redirect("/login?error=forbidden");
+  }
+
   const user = await getCurrentUser();
   if (user) {
     redirect("/");
