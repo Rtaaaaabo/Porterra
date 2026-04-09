@@ -1,5 +1,9 @@
 import crypto from "node:crypto";
 
+const DEFAULT_UPLOAD_MAX_WIDTH = 1920;
+const DEFAULT_UPLOAD_MAX_HEIGHT = 1920;
+const DEFAULT_UPLOAD_QUALITY = "auto:good";
+
 function requireEnv(key: string): string {
   const value = process.env[key];
   if (!value) {
@@ -32,15 +36,45 @@ function buildOptimizedDeliveryUrl(url: string): string {
   return url.replace("/image/upload/", "/image/upload/f_auto,q_auto/");
 }
 
+function readPositiveIntegerEnv(
+  key: string,
+  fallback: number,
+): number {
+  const raw = process.env[key]?.trim();
+  if (!raw) return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) return fallback;
+  return Math.floor(value);
+}
+
+function buildIncomingTransformation(): string {
+  const maxWidth = readPositiveIntegerEnv(
+    "CLOUDINARY_UPLOAD_MAX_WIDTH",
+    DEFAULT_UPLOAD_MAX_WIDTH,
+  );
+  const maxHeight = readPositiveIntegerEnv(
+    "CLOUDINARY_UPLOAD_MAX_HEIGHT",
+    DEFAULT_UPLOAD_MAX_HEIGHT,
+  );
+  const quality =
+    process.env.CLOUDINARY_UPLOAD_QUALITY?.trim() || DEFAULT_UPLOAD_QUALITY;
+
+  return `c_limit,w_${maxWidth},h_${maxHeight},q_${quality}`;
+}
+
 export async function uploadImageToCloudinary(file: File): Promise<string> {
   const cloudName = requireEnv("CLOUDINARY_CLOUD_NAME");
   const apiKey = requireEnv("CLOUDINARY_API_KEY");
   const apiSecret = requireEnv("CLOUDINARY_API_SECRET");
   const folder = process.env.CLOUDINARY_FOLDER?.trim();
   const format = isHeicLike(file) ? "jpg" : undefined;
+  const transformation = buildIncomingTransformation();
 
   const timestamp = String(Math.floor(Date.now() / 1000));
-  const signParams: Record<string, string> = { timestamp };
+  const signParams: Record<string, string> = {
+    timestamp,
+    transformation,
+  };
   if (folder) {
     signParams.folder = folder;
   }
@@ -55,6 +89,7 @@ export async function uploadImageToCloudinary(file: File): Promise<string> {
   uploadForm.append("api_key", apiKey);
   uploadForm.append("timestamp", timestamp);
   uploadForm.append("signature", signature);
+  uploadForm.append("transformation", transformation);
   if (folder) {
     uploadForm.append("folder", folder);
   }

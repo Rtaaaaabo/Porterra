@@ -56,6 +56,15 @@ cp .env.example .env
 - `CLOUDINARY_API_KEY`
 - `CLOUDINARY_API_SECRET`
 - `CLOUDINARY_FOLDER`（任意）
+- `CLOUDINARY_UPLOAD_MAX_WIDTH`（任意, 既定: `1920`）
+- `CLOUDINARY_UPLOAD_MAX_HEIGHT`（任意, 既定: `1920`）
+- `CLOUDINARY_UPLOAD_QUALITY`（任意, 既定: `auto:good`）
+
+### 画像アップロードのコスト最適化
+
+- 投稿時アップロードで `c_limit` 変換を適用し、指定サイズを超える画像だけ自動縮小します。
+- 既定は `1920x1920` / `q_auto:good` です（小さい画像はそのまま）。
+- 配信時は `f_auto,q_auto` を付けたURLを返すため、閲覧時の転送量も抑えます。
 
 3. Prisma Client生成
 

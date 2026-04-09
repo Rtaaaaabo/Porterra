@@ -71,7 +71,9 @@ export default async function NewPostPage({ searchParams }: Props) {
               required
               className="w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-sky-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-sky-700"
             />
-            <span className="mt-2 block text-xs text-slate-500">複数選択可（JPG / PNG / WEBP / HEIC など）</span>
+            <span className="mt-2 block text-xs text-slate-500">
+              複数選択可（JPG / PNG / WEBP / HEIC など）。大きい画像はアップロード時に自動圧縮されます。
+            </span>
           </span>
         </label>
 
