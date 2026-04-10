@@ -37,26 +37,9 @@ export default function VisibilityFields({
           className="mt-0.5"
         />
         <span>
-          自分のみ（または公開相手をカスタム選択）
+          自分のみ
           <span className="block text-xs text-slate-500">
             自分だけ見える状態。必要なら下で公開相手を選べます。
-          </span>
-        </span>
-      </label>
-
-      <label className="flex items-start gap-2 text-sm text-slate-700">
-        <input
-          type="radio"
-          name="visibility"
-          value="FRIENDS"
-          checked={visibility === "FRIENDS"}
-          onChange={() => setVisibility("FRIENDS")}
-          className="mt-0.5"
-        />
-        <span>
-          友達のみ
-          <span className="block text-xs text-slate-500">
-            投稿者と友達関係にあるユーザーのみ表示します。
           </span>
         </span>
       </label>
