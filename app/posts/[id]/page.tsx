@@ -4,6 +4,7 @@ import { toggleLikeAction } from "@/app/actions";
 import FormSubmitButton from "@/app/components/form-submit-button";
 import { getCurrentUser } from "@/lib/auth";
 import { getPostDetail } from "@/lib/db";
+import { getPostVisibilityLabel } from "@/lib/post-visibility";
 import { resolveSpotLabel } from "@/lib/spot-label";
 import DeletePostButton from "@/app/posts/[id]/delete-post-button";
 
@@ -45,6 +46,7 @@ export default async function PostDetailPage({ params }: Props) {
           <h1 className="text-3xl font-bold text-slate-900">{post.title}</h1>
           <p className="text-sm text-slate-600">{formatDate(post.createdAt)} / 投稿者: {post.authorName}</p>
           <p className="text-sm text-slate-700">📍 {spotLabel}</p>
+          <p className="text-sm text-slate-600">公開範囲: {getPostVisibilityLabel(post.visibility)}</p>
         </header>
 
         <p className="whitespace-pre-wrap text-slate-800">{post.body}</p>
@@ -73,7 +75,15 @@ export default async function PostDetailPage({ params }: Props) {
             </Link>
           )}
           {user?.id === post.authorId ? (
-            <DeletePostButton postId={post.id} />
+            <>
+              <Link
+                href={`/posts/${post.id}/edit`}
+                className="rounded-md border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                投稿を編集
+              </Link>
+              <DeletePostButton postId={post.id} />
+            </>
           ) : null}
         </div>
       </article>

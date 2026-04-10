@@ -6,15 +6,24 @@ datasource db {
   provider = "postgresql"
 }
 
+enum PostVisibility {
+  CUSTOM
+  FRIENDS
+  PUBLIC
+}
+
 model User {
-  id           String    @id @default(cuid())
-  name         String
-  email        String    @unique
-  passwordHash String
-  createdAt    DateTime  @default(now())
-  posts        Post[]
-  likes        Like[]
-  sessions     Session[]
+  id                     String                 @id @default(cuid())
+  name                   String
+  email                  String                 @unique
+  passwordHash           String
+  createdAt              DateTime               @default(now())
+  posts                  Post[]
+  likes                  Like[]
+  sessions               Session[]
+  postVisibilityAccesses PostVisibilityAccess[]
+  friendships            Friendship[]           @relation("UserFriendships")
+  friendedBy             Friendship[]           @relation("UserFriendedBy")
 
   @@map("users")
 }
@@ -33,20 +42,50 @@ model Spot {
 }
 
 model Post {
-  id        String      @id @default(cuid())
-  title     String
-  body      String
-  userId    String
-  spotId    String
-  createdAt DateTime    @default(now())
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  spot      Spot        @relation(fields: [spotId], references: [id], onDelete: Cascade)
-  images    PostImage[]
-  likes     Like[]
+  id                 String                 @id @default(cuid())
+  title              String
+  body               String
+  userId             String
+  spotId             String
+  visibility         PostVisibility         @default(PUBLIC)
+  createdAt          DateTime               @default(now())
+  user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  spot               Spot                   @relation(fields: [spotId], references: [id], onDelete: Cascade)
+  images             PostImage[]
+  likes              Like[]
+  visibilityAccesses PostVisibilityAccess[]
 
   @@index([userId])
   @@index([spotId])
   @@map("posts")
+}
+
+model PostVisibilityAccess {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@map("post_visibility_accesses")
+}
+
+model Friendship {
+  id           String   @id @default(cuid())
+  userId       String
+  friendUserId String
+  createdAt    DateTime @default(now())
+  user         User     @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
+  friendUser   User     @relation("UserFriendedBy", fields: [friendUserId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendUserId])
+  @@index([userId])
+  @@index([friendUserId])
+  @@map("friendships")
 }
 
 model PostImage {

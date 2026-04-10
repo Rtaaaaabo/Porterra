@@ -12,7 +12,8 @@ function formatDate(iso: string): string {
 }
 
 export default async function HomePage() {
-  const [user, feed] = await Promise.all([getCurrentUser(), getPostFeed()]);
+  const user = await getCurrentUser();
+  const feed = await getPostFeed(user?.id);
   const feedWithSpotLabel = await Promise.all(
     feed.map(async (post) => ({
       ...post,

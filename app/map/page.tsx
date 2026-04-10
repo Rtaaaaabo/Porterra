@@ -1,12 +1,14 @@
 import Link from "next/link";
 import MapClient from "@/app/map/map-client";
+import { getCurrentUser } from "@/lib/auth";
 import { getPostMapPoints } from "@/lib/db";
 import { resolveSpotLabel } from "@/lib/spot-label";
 
 export const dynamic = "force-dynamic";
 
 export default async function MapPage() {
-  const points = await getPostMapPoints();
+  const user = await getCurrentUser();
+  const points = await getPostMapPoints(user?.id);
   const pointsWithSpotLabel = await Promise.all(
     points.map(async (point) => ({
       ...point,

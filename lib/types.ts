@@ -1,8 +1,11 @@
+import type { PostVisibilityValue } from "@/lib/post-visibility";
+
 export type PostFeedItem = {
   id: string;
   title: string;
   body: string;
   createdAt: string;
+  visibility: PostVisibilityValue;
   authorName: string;
   spotName: string;
   prefecture: string;
@@ -23,6 +26,7 @@ export type PostDetail = PostFeedItem & {
 export type PostMapPoint = {
   id: string;
   title: string;
+  visibility: PostVisibilityValue;
   authorName: string;
   spotName: string;
   prefecture: string;
@@ -30,4 +34,10 @@ export type PostMapPoint = {
   lat: number;
   lng: number;
   createdAt: string;
+};
+
+export type VisibilitySelectableUser = {
+  id: string;
+  name: string;
+  email: string;
 };
