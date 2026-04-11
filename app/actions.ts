@@ -12,13 +12,19 @@ import {
   createPostWithSpotAndImages,
   deletePostByIdForUser,
   findUserByEmail,
+  getPostDetail,
   toggleLike,
+  updatePostByIdForUser,
 } from "@/lib/db";
 import {
   extractLatLngFromImage,
   reverseGeocodeFromLatLng,
 } from "@/lib/location";
 import { hashPassword } from "@/lib/password";
+import {
+  parsePostVisibility,
+  type PostVisibilityValue,
+} from "@/lib/post-visibility";
 
 const SUPPORTED_IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
@@ -43,6 +49,18 @@ const SUPPORTED_IMAGE_EXTENSIONS = new Set([
 function getString(formData: FormData, key: string): string {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
+}
+
+function getStringArray(formData: FormData, key: string): string[] {
+  return formData
+    .getAll(key)
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
+function getPostVisibilityValue(formData: FormData): PostVisibilityValue {
+  return parsePostVisibility(getString(formData, "visibility")) ?? "PUBLIC";
 }
 
 function getExtension(fileName: string): string {
@@ -135,6 +153,8 @@ export async function createPostAction(formData: FormData): Promise<void> {
 
   const title = getString(formData, "title");
   const body = getString(formData, "body");
+  const visibility = getPostVisibilityValue(formData);
+  const visibleToUserIds = getStringArray(formData, "visibleToUserIds");
 
   if (!title || !body) {
     redirect("/posts/new?error=required");
@@ -191,6 +211,8 @@ export async function createPostAction(formData: FormData): Promise<void> {
     title,
     body,
     userId: user.id,
+    visibility,
+    visibleToUserIds,
     spot: {
       name: spotName,
       prefecture,
@@ -202,6 +224,7 @@ export async function createPostAction(formData: FormData): Promise<void> {
   });
 
   revalidatePath("/");
+  revalidatePath("/map");
   revalidatePath(`/posts/${post.id}`);
   redirect(`/posts/${post.id}`);
 }
@@ -212,10 +235,48 @@ export async function toggleLikeAction(formData: FormData): Promise<void> {
   if (!postId) {
     redirect("/");
   }
+  const post = await getPostDetail(postId, user.id);
+  if (!post) {
+    redirect("/");
+  }
 
   await toggleLike(postId, user.id);
   revalidatePath("/");
   revalidatePath(`/posts/${postId}`);
+  redirect(`/posts/${postId}`);
+}
+
+export async function updatePostAction(formData: FormData): Promise<void> {
+  const user = await requireUser();
+  const postId = getString(formData, "postId");
+  const title = getString(formData, "title");
+  const body = getString(formData, "body");
+  const visibility = getPostVisibilityValue(formData);
+  const visibleToUserIds = getStringArray(formData, "visibleToUserIds");
+
+  if (!postId) {
+    redirect("/");
+  }
+  if (!title || !body) {
+    redirect(`/posts/${postId}/edit?error=required`);
+  }
+
+  const updated = await updatePostByIdForUser({
+    postId,
+    userId: user.id,
+    title,
+    body,
+    visibility,
+    visibleToUserIds,
+  });
+  if (!updated) {
+    redirect(`/posts/${postId}`);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/map");
+  revalidatePath(`/posts/${postId}`);
+  revalidatePath(`/posts/${postId}/edit`);
   redirect(`/posts/${postId}`);
 }
 
@@ -233,5 +294,6 @@ export async function deletePostAction(formData: FormData): Promise<void> {
   }
 
   revalidatePath("/");
+  revalidatePath("/map");
   redirect("/");
 }
