@@ -18,6 +18,7 @@ import {
 } from "@/lib/db";
 import {
   extractLatLngFromImage,
+  extractYearFromImage,
   reverseGeocodeFromLatLng,
 } from "@/lib/location";
 import { hashPassword } from "@/lib/password";
@@ -164,6 +165,7 @@ export async function createPostAction(formData: FormData): Promise<void> {
   const imageUrls: string[] = [];
   let detectedLat: number | null = null;
   let detectedLng: number | null = null;
+  let takenYear: number | null = null;
 
   for (const item of files) {
     if (!(item instanceof File)) continue;
@@ -177,6 +179,9 @@ export async function createPostAction(formData: FormData): Promise<void> {
         detectedLat = gps.lat;
         detectedLng = gps.lng;
       }
+    }
+    if (takenYear === null) {
+      takenYear = await extractYearFromImage(item);
     }
     try {
       const url = await uploadImageToCloudinary(item);
@@ -192,6 +197,7 @@ export async function createPostAction(formData: FormData): Promise<void> {
   }
 
   let spotName = "不明な場所";
+  let city = "";
   let prefecture = "";
   let country = "不明";
 
@@ -202,6 +208,7 @@ export async function createPostAction(formData: FormData): Promise<void> {
     });
     if (resolved) {
       spotName = resolved.name;
+      city = resolved.city;
       prefecture = resolved.prefecture;
       country = resolved.country;
     }
@@ -213,8 +220,10 @@ export async function createPostAction(formData: FormData): Promise<void> {
     userId: user.id,
     visibility,
     visibleToUserIds,
+    takenYear,
     spot: {
       name: spotName,
+      city,
       prefecture,
       country,
       lat: detectedLat,

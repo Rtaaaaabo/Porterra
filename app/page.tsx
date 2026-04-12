@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { logoutAction } from "@/app/actions";
+import FilterPanel from "@/app/components/filter-panel";
 import FormSubmitButton from "@/app/components/form-submit-button";
 import { getCurrentUser } from "@/lib/auth";
-import { getPostFeed } from "@/lib/db";
+import { getFilterOptions, getPostFeed } from "@/lib/db";
 import { resolveSpotLabel } from "@/lib/spot-label";
+import type { PostFilters } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +14,27 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleString("ja-JP");
 }
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const user = await getCurrentUser();
-  const feed = await getPostFeed(user?.id);
+  const params = await searchParams;
+
+  const rawYear = typeof params.takenYear === "string" ? parseInt(params.takenYear, 10) : NaN;
+  const filters: PostFilters = {
+    country: typeof params.country === "string" ? params.country || undefined : undefined,
+    prefecture: typeof params.prefecture === "string" ? params.prefecture || undefined : undefined,
+    city: typeof params.city === "string" ? params.city || undefined : undefined,
+    takenYear: Number.isNaN(rawYear) ? undefined : rawYear,
+  };
+
+  const [feed, filterOptions] = await Promise.all([
+    getPostFeed(user?.id, filters),
+    getFilterOptions(user?.id),
+  ]);
+
   const feedWithSpotLabel = await Promise.all(
     feed.map(async (post) => ({
       ...post,
@@ -77,9 +98,16 @@ export default async function HomePage() {
         </div>
       </header>
 
+      <Suspense>
+        <FilterPanel
+          locations={filterOptions.locations}
+          years={filterOptions.years}
+        />
+      </Suspense>
+
       {feedWithSpotLabel.length === 0 ? (
         <section className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
-          まだ投稿がありません。最初の旅先をシェアしてみましょう。
+          投稿が見つかりません。フィルターを変更するか、最初の旅先をシェアしてみましょう。
         </section>
       ) : (
         <section className="grid gap-5">

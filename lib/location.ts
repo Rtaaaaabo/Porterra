@@ -20,6 +20,7 @@ export function normalizeLatLng(input: LatLng): LatLng {
 
 export type SpotNameResult = {
   name: string;
+  city: string;
   prefecture: string;
   country: string;
 };
@@ -33,6 +34,7 @@ export async function extractLatLngFromImage(
     longitude?: number;
   } | null;
 
+
   if (gps?.latitude == null || gps?.longitude == null) {
     return null;
   }
@@ -41,6 +43,23 @@ export async function extractLatLngFromImage(
     lat: gps.latitude,
     lng: gps.longitude,
   });
+}
+
+export async function extractYearFromImage(file: File): Promise<number | null> {
+  const buffer = Buffer.from(await file.arrayBuffer());
+  try {
+    const data = (await exifr.parse(buffer, ["DateTimeOriginal"])) as {
+      DateTimeOriginal?: Date;
+    } | null;
+    if (data?.DateTimeOriginal instanceof Date) {
+      const year = data.DateTimeOriginal.getFullYear();
+      const currentYear = new Date().getFullYear();
+      return year > 1800 && year <= currentYear ? year : null;
+    }
+  } catch {
+    // EXIF parse failed — skip silently
+  }
+  return null;
 }
 
 export async function geocodeSpotName(input: {
@@ -145,6 +164,14 @@ export async function reverseGeocodeFromLatLng(
       .map((value) => value?.trim())
       .find((value): value is string => Boolean(value));
 
+    const city = (
+      address?.city ??
+      address?.town ??
+      address?.village ??
+      address?.suburb ??
+      ""
+    ).trim();
+
     const prefecture = (
       address?.state ??
       address?.province ??
@@ -159,6 +186,7 @@ export async function reverseGeocodeFromLatLng(
 
     return {
       name: spotName,
+      city,
       prefecture,
       country,
     };

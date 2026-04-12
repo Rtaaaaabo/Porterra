@@ -1,5 +1,17 @@
 import type { PostVisibilityValue } from "@/lib/post-visibility";
 
+export type PostFilters = {
+  country?: string;
+  prefecture?: string;
+  city?: string;
+  takenYear?: number;
+};
+
+export type FilterOptions = {
+  locations: Array<{ country: string; prefecture: string; city: string }>;
+  years: number[];
+};
+
 export type PostFeedItem = {
   id: string;
   title: string;
@@ -8,6 +20,7 @@ export type PostFeedItem = {
   visibility: PostVisibilityValue;
   authorName: string;
   spotName: string;
+  city: string;
   prefecture: string;
   country: string;
   lat: number | null;
@@ -29,6 +42,7 @@ export type PostMapPoint = {
   visibility: PostVisibilityValue;
   authorName: string;
   spotName: string;
+  city: string;
   prefecture: string;
   country: string;
   lat: number;

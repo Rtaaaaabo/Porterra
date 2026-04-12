@@ -32,6 +32,7 @@ model Spot {
   id         String   @id @default(cuid())
   name       String
   prefecture String
+  city       String   @default("")
   country    String
   lat        Float?
   lng        Float?
@@ -48,6 +49,7 @@ model Post {
   userId             String
   spotId             String
   visibility         PostVisibility         @default(PUBLIC)
+  takenYear          Int?
   createdAt          DateTime               @default(now())
   user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   spot               Spot                   @relation(fields: [spotId], references: [id], onDelete: Cascade)

@@ -1,8 +1,10 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type {
+  FilterOptions,
   PostDetail,
   PostFeedItem,
+  PostFilters,
   PostMapPoint,
   VisibilitySelectableUser,
 } from "@/lib/types";
@@ -104,8 +106,10 @@ export async function createPostWithSpotAndImages(input: {
   userId: string;
   visibility: PostVisibilityValue;
   visibleToUserIds: string[];
+  takenYear: number | null;
   spot: {
     name: string;
+    city: string;
     prefecture: string;
     country: string;
     lat: number | null;
@@ -121,6 +125,7 @@ export async function createPostWithSpotAndImages(input: {
     const spot = await tx.spot.create({
       data: {
         name: input.spot.name,
+        city: input.spot.city,
         prefecture: input.spot.prefecture,
         country: input.spot.country,
         lat: input.spot.lat,
@@ -135,6 +140,7 @@ export async function createPostWithSpotAndImages(input: {
         userId: input.userId,
         spotId: spot.id,
         visibility: input.visibility,
+        takenYear: input.takenYear,
       },
     });
 
@@ -160,9 +166,27 @@ export async function createPostWithSpotAndImages(input: {
   return { id: post.id };
 }
 
-export async function getPostFeed(viewerUserId?: string): Promise<PostFeedItem[]> {
+function buildFilterConditions(filters?: PostFilters): Prisma.PostWhereInput[] {
+  const conditions: Prisma.PostWhereInput[] = [];
+  if (filters?.country) conditions.push({ spot: { country: filters.country } });
+  if (filters?.prefecture) conditions.push({ spot: { prefecture: filters.prefecture } });
+  if (filters?.city) conditions.push({ spot: { city: filters.city } });
+  if (filters?.takenYear !== undefined) conditions.push({ takenYear: filters.takenYear });
+  return conditions;
+}
+
+export async function getPostFeed(
+  viewerUserId?: string,
+  filters?: PostFilters,
+): Promise<PostFeedItem[]> {
+  const filterConditions = buildFilterConditions(filters);
+  const where: Prisma.PostWhereInput =
+    filterConditions.length > 0
+      ? { AND: [buildPostVisibilityWhere(viewerUserId), ...filterConditions] }
+      : buildPostVisibilityWhere(viewerUserId);
+
   const posts = await prisma.post.findMany({
-    where: buildPostVisibilityWhere(viewerUserId),
+    where,
     orderBy: { createdAt: "desc" },
     include: {
       user: true,
@@ -182,6 +206,7 @@ export async function getPostFeed(viewerUserId?: string): Promise<PostFeedItem[]
     createdAt: post.createdAt.toISOString(),
     authorName: post.user.name,
     spotName: post.spot.name,
+    city: post.spot.city,
     prefecture: post.spot.prefecture,
     country: post.spot.country,
     lat: post.spot.lat,
@@ -223,6 +248,7 @@ export async function getPostDetail(
     authorId: post.userId,
     authorName: post.user.name,
     spotName: post.spot.name,
+    city: post.spot.city,
     prefecture: post.spot.prefecture,
     country: post.spot.country,
     lat: post.spot.lat,
@@ -361,17 +387,15 @@ export async function deletePostByIdForUser(
 
 export async function getPostMapPoints(
   viewerUserId?: string,
+  filters?: PostFilters,
 ): Promise<PostMapPoint[]> {
+  const filterConditions = buildFilterConditions(filters);
   const posts = await prisma.post.findMany({
     where: {
       AND: [
         buildPostVisibilityWhere(viewerUserId),
-        {
-          spot: {
-            lat: { not: null },
-            lng: { not: null },
-          },
-        },
+        { spot: { lat: { not: null }, lng: { not: null } } },
+        ...filterConditions,
       ],
     },
     include: {
@@ -387,12 +411,56 @@ export async function getPostMapPoints(
     visibility: post.visibility,
     authorName: post.user.name,
     spotName: post.spot.name,
+    city: post.spot.city,
     prefecture: post.spot.prefecture,
     country: post.spot.country,
     lat: post.spot.lat as number,
     lng: post.spot.lng as number,
     createdAt: post.createdAt.toISOString(),
   }));
+}
+
+export async function getFilterOptions(
+  viewerUserId?: string,
+): Promise<FilterOptions> {
+  const posts = await prisma.post.findMany({
+    where: buildPostVisibilityWhere(viewerUserId),
+    select: {
+      takenYear: true,
+      spot: {
+        select: { country: true, prefecture: true, city: true },
+      },
+    },
+  });
+
+  const locationsMap = new Map<
+    string,
+    { country: string; prefecture: string; city: string }
+  >();
+  const yearsSet = new Set<number>();
+
+  for (const post of posts) {
+    const { country, prefecture, city } = post.spot;
+    if (country) {
+      const key = `${country}|${prefecture}|${city}`;
+      if (!locationsMap.has(key)) {
+        locationsMap.set(key, { country, prefecture, city });
+      }
+    }
+    if (post.takenYear !== null) {
+      yearsSet.add(post.takenYear);
+    }
+  }
+
+  return {
+    locations: Array.from(locationsMap.values()).sort(
+      (a, b) =>
+        a.country.localeCompare(b.country) ||
+        a.prefecture.localeCompare(b.prefecture) ||
+        a.city.localeCompare(b.city),
+    ),
+    years: Array.from(yearsSet).sort((a, b) => b - a),
+  };
 }
 
 export async function toggleLike(
