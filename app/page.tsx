@@ -4,7 +4,7 @@ import { logoutAction } from "@/app/actions";
 import FilterPanel from "@/app/components/filter-panel";
 import FormSubmitButton from "@/app/components/form-submit-button";
 import { getCurrentUser } from "@/lib/auth";
-import { getFilterOptions, getPostFeed } from "@/lib/db";
+import { countPendingFriendRequests, getFilterOptions, getPostFeed } from "@/lib/db";
 import { resolveSpotLabel } from "@/lib/spot-label";
 import type { PostFilters } from "@/lib/types";
 
@@ -30,9 +30,10 @@ export default async function HomePage({
     takenYear: Number.isNaN(rawYear) ? undefined : rawYear,
   };
 
-  const [feed, filterOptions] = await Promise.all([
+  const [feed, filterOptions, pendingFriendRequests] = await Promise.all([
     getPostFeed(user?.id, filters),
     getFilterOptions(user?.id),
+    user ? countPendingFriendRequests(user.id) : Promise.resolve(0),
   ]);
 
   const feedWithSpotLabel = await Promise.all(
@@ -65,6 +66,20 @@ export default async function HomePage({
           </Link>
           {user ? (
             <>
+              <Link
+                href="/friends"
+                className="relative rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                友達
+                {pendingFriendRequests > 0 ? (
+                  <span
+                    aria-label={`未対応の友達申請 ${pendingFriendRequests} 件`}
+                    className="absolute -right-1.5 -top-1.5 rounded-full bg-rose-600 px-1.5 py-0.5 text-xs font-bold text-white"
+                  >
+                    {pendingFriendRequests}
+                  </span>
+                ) : null}
+              </Link>
               <Link
                 href="/posts/new"
                 className="rounded-md bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700"

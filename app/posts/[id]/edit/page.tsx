@@ -4,7 +4,11 @@ import { updatePostAction } from "@/app/actions";
 import FormSubmitButton from "@/app/components/form-submit-button";
 import VisibilityFields from "@/app/posts/visibility-fields";
 import { requireUser } from "@/lib/auth";
-import { getEditablePostByIdForUser, listUsersForVisibilitySelector } from "@/lib/db";
+import {
+  getEditablePostByIdForUser,
+  listFriends,
+  listUsersForVisibilitySelector,
+} from "@/lib/db";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -22,9 +26,10 @@ export default async function EditPostPage({ params, searchParams }: Props) {
   const { id } = await params;
   const query = await searchParams;
 
-  const [post, users] = await Promise.all([
+  const [post, users, friends] = await Promise.all([
     getEditablePostByIdForUser(id, user.id),
     listUsersForVisibilitySelector(user.id),
+    listFriends(user.id),
   ]);
 
   if (!post) {
@@ -79,6 +84,7 @@ export default async function EditPostPage({ params, searchParams }: Props) {
           users={users}
           defaultVisibility={post.visibility}
           defaultVisibleToUserIds={post.visibleToUserIds}
+          friendCount={friends.length}
         />
 
         <FormSubmitButton

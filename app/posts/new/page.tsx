@@ -3,7 +3,7 @@ import { createPostAction } from "@/app/actions";
 import FormSubmitButton from "@/app/components/form-submit-button";
 import VisibilityFields from "@/app/posts/visibility-fields";
 import { requireUser } from "@/lib/auth";
-import { listUsersForVisibilitySelector } from "@/lib/db";
+import { listFriends, listUsersForVisibilitySelector } from "@/lib/db";
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -21,7 +21,10 @@ function readErrorMessage(error: string | undefined): string | null {
 export default async function NewPostPage({ searchParams }: Props) {
   const user = await requireUser();
   const params = await searchParams;
-  const users = await listUsersForVisibilitySelector(user.id);
+  const [users, friends] = await Promise.all([
+    listUsersForVisibilitySelector(user.id),
+    listFriends(user.id),
+  ]);
   const error = typeof params.error === "string" ? params.error : undefined;
 
   return (
@@ -63,7 +66,11 @@ export default async function NewPostPage({ searchParams }: Props) {
           />
         </label>
 
-        <VisibilityFields users={users} defaultVisibility="PUBLIC" />
+        <VisibilityFields
+          users={users}
+          defaultVisibility="PUBLIC"
+          friendCount={friends.length}
+        />
 
         <label className="block text-sm font-medium text-slate-700">
           写真
