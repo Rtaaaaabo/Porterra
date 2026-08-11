@@ -1,6 +1,6 @@
 "use server";
 
-import AuthError from "next-auth";
+import { AuthError } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/auth";
@@ -139,7 +139,9 @@ export async function loginAction(formData: FormData): Promise<void> {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      redirect("/login?error=メールアドレスまたはパスワードが違います。");
+      redirect(
+        `/login?error=${encodeURIComponent("メールアドレスまたはパスワードが違います。")}`,
+      );
     }
     throw error;
   }
