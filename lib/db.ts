@@ -6,6 +6,8 @@ import type {
   PostFeedItem,
   PostFilters,
   PostMapPoint,
+  FriendsOverview,
+  FriendUser,
   VisibilitySelectableUser,
 } from "@/lib/types";
 import type { PostVisibilityValue } from "@/lib/post-visibility";
@@ -32,11 +34,14 @@ function buildPostVisibilityWhere(
       {
         visibility: "FRIENDS",
         user: {
+          // 承認済みの関係だけを友達とみなす。PENDING では見えない。
+          // 向きはどちらでもよい（A が申請して B が承認した関係は双方から見て友達）
           OR: [
             {
               friendships: {
                 some: {
                   friendUserId: viewerUserId,
+                  status: "ACCEPTED",
                 },
               },
             },
@@ -44,6 +49,7 @@ function buildPostVisibilityWhere(
               friendedBy: {
                 some: {
                   userId: viewerUserId,
+                  status: "ACCEPTED",
                 },
               },
             },
@@ -488,5 +494,212 @@ export async function toggleLike(
       postId,
       userId,
     },
+  });
+}
+
+// --- 友達 ---
+
+/** 権限エラーと区別せず「見つからない」に倒すためのエラー */
+export class FriendshipError extends Error {
+  constructor(readonly code: string, message: string) {
+    super(message);
+  }
+}
+
+const friendUserSelect = { id: true, name: true, email: true } as const;
+
+/**
+ * 友達申請を送る。
+ *
+ * すれ違い（相手から自分あてに PENDING が来ている状態で申請した）場合は、
+ * 新しい行を作らずにその申請を承認する。2行できるのを防ぐため。
+ */
+export async function sendFriendRequest(
+  currentUserId: string,
+  targetUserId: string,
+): Promise<{ accepted: boolean }> {
+  if (currentUserId === targetUserId) {
+    throw new FriendshipError("cannot_friend_self", "自分自身には申請できません");
+  }
+
+  const target = await prisma.user.findUnique({ where: { id: targetUserId } });
+  if (!target) {
+    throw new FriendshipError("not_found", "ユーザーが見つかりません");
+  }
+
+  const existing = await prisma.friendship.findFirst({
+    where: {
+      OR: [
+        { userId: currentUserId, friendUserId: targetUserId },
+        { userId: targetUserId, friendUserId: currentUserId },
+      ],
+    },
+  });
+
+  if (existing) {
+    if (existing.status === "ACCEPTED") {
+      throw new FriendshipError("already_related", "すでに友達です");
+    }
+    // 相手から届いていた申請なら、これを承認とみなす
+    if (existing.friendUserId === currentUserId) {
+      await prisma.friendship.update({
+        where: { id: existing.id },
+        data: { status: "ACCEPTED", respondedAt: new Date() },
+      });
+      return { accepted: true };
+    }
+    throw new FriendshipError("already_related", "すでに申請しています");
+  }
+
+  await prisma.friendship.create({
+    data: { userId: currentUserId, friendUserId: targetUserId },
+  });
+  return { accepted: false };
+}
+
+/**
+ * 届いた申請を承認する。承認できるのは申請された側だけ。
+ * 既に承認済みなら何もしない（冪等）。
+ */
+export async function acceptFriendRequest(
+  currentUserId: string,
+  friendshipId: string,
+): Promise<void> {
+  const friendship = await prisma.friendship.findUnique({ where: { id: friendshipId } });
+
+  // 他人の関係は、存在自体を伏せて「見つからない」にする
+  if (!friendship || friendship.friendUserId !== currentUserId) {
+    throw new FriendshipError("not_found", "申請が見つかりません");
+  }
+  if (friendship.status === "ACCEPTED") return;
+
+  await prisma.friendship.update({
+    where: { id: friendship.id },
+    data: { status: "ACCEPTED", respondedAt: new Date() },
+  });
+}
+
+/** 届いた申請を拒否する。行を消すので、同じ相手から再申請できる */
+export async function rejectFriendRequest(
+  currentUserId: string,
+  friendshipId: string,
+): Promise<void> {
+  const friendship = await prisma.friendship.findUnique({ where: { id: friendshipId } });
+
+  if (!friendship || friendship.friendUserId !== currentUserId) {
+    throw new FriendshipError("not_found", "申請が見つかりません");
+  }
+  if (friendship.status === "ACCEPTED") {
+    throw new FriendshipError("already_accepted", "すでに承認済みです");
+  }
+
+  await prisma.friendship.delete({ where: { id: friendship.id } });
+}
+
+/** 送った申請を取り消す。取り消せるのは送った側だけ */
+export async function cancelFriendRequest(
+  currentUserId: string,
+  friendshipId: string,
+): Promise<void> {
+  const friendship = await prisma.friendship.findUnique({ where: { id: friendshipId } });
+
+  if (!friendship || friendship.userId !== currentUserId) {
+    throw new FriendshipError("not_found", "申請が見つかりません");
+  }
+  if (friendship.status === "ACCEPTED") {
+    throw new FriendshipError("already_accepted", "すでに承認済みです");
+  }
+
+  await prisma.friendship.delete({ where: { id: friendship.id } });
+}
+
+/** 友達を解除する。承認済みの関係は、どちらからでも解除できる */
+export async function removeFriend(
+  currentUserId: string,
+  friendUserId: string,
+): Promise<void> {
+  const friendship = await prisma.friendship.findFirst({
+    where: {
+      status: "ACCEPTED",
+      OR: [
+        { userId: currentUserId, friendUserId },
+        { userId: friendUserId, friendUserId: currentUserId },
+      ],
+    },
+  });
+
+  if (!friendship) {
+    throw new FriendshipError("not_found", "友達が見つかりません");
+  }
+
+  await prisma.friendship.delete({ where: { id: friendship.id } });
+}
+
+/** 承認済みの友達だけを返す */
+export async function listFriends(currentUserId: string): Promise<FriendUser[]> {
+  const rows = await prisma.friendship.findMany({
+    where: {
+      status: "ACCEPTED",
+      OR: [{ userId: currentUserId }, { friendUserId: currentUserId }],
+    },
+    include: {
+      user: { select: friendUserSelect },
+      friendUser: { select: friendUserSelect },
+    },
+  });
+
+  return rows
+    .map((row) => (row.userId === currentUserId ? row.friendUser : row.user))
+    .sort((a, b) => a.name.localeCompare(b.name, "ja"));
+}
+
+/** `/friends` 画面に必要な情報をまとめて取る */
+export async function getFriendsOverview(currentUserId: string): Promise<FriendsOverview> {
+  const [rows, allUsers] = await Promise.all([
+    prisma.friendship.findMany({
+      where: { OR: [{ userId: currentUserId }, { friendUserId: currentUserId }] },
+      include: {
+        user: { select: friendUserSelect },
+        friendUser: { select: friendUserSelect },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.user.findMany({
+      where: { id: { not: currentUserId } },
+      orderBy: [{ name: "asc" }, { email: "asc" }],
+      select: friendUserSelect,
+    }),
+  ]);
+
+  const friends: FriendUser[] = [];
+  const received: FriendsOverview["received"] = [];
+  const sent: FriendsOverview["sent"] = [];
+  const relatedIds = new Set<string>();
+
+  for (const row of rows) {
+    const other = row.userId === currentUserId ? row.friendUser : row.user;
+    relatedIds.add(other.id);
+
+    if (row.status === "ACCEPTED") {
+      friends.push(other);
+    } else if (row.friendUserId === currentUserId) {
+      received.push({ id: row.id, user: other, createdAt: row.createdAt.toISOString() });
+    } else {
+      sent.push({ id: row.id, user: other, createdAt: row.createdAt.toISOString() });
+    }
+  }
+
+  return {
+    friends: friends.sort((a, b) => a.name.localeCompare(b.name, "ja")),
+    received,
+    sent,
+    candidates: allUsers.filter((u) => !relatedIds.has(u.id)),
+  };
+}
+
+/** 未対応の申請数。ヘッダーのバッジに使う */
+export async function countPendingFriendRequests(currentUserId: string): Promise<number> {
+  return prisma.friendship.count({
+    where: { friendUserId: currentUserId, status: "PENDING" },
   });
 }

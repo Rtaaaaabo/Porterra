@@ -55,3 +55,27 @@ export type VisibilitySelectableUser = {
   name: string;
   email: string;
 };
+
+export type FriendUser = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+export type FriendRequest = {
+  /** friendships の行 id */
+  id: string;
+  user: FriendUser;
+  createdAt: string;
+};
+
+export type FriendsOverview = {
+  /** 承認済みの友達 */
+  friends: FriendUser[];
+  /** 自分あてに届いている申請（承認・拒否できる） */
+  received: FriendRequest[];
+  /** 自分が送っていて、まだ返事がない申請 */
+  sent: FriendRequest[];
+  /** まだ関係がなく、申請を送れる相手 */
+  candidates: FriendUser[];
+};

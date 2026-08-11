@@ -6,6 +6,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
 enum PostVisibility {
   CUSTOM
   FRIENDS
@@ -77,16 +82,21 @@ model PostVisibilityAccess {
 }
 
 model Friendship {
-  id           String   @id @default(cuid())
+  id           String           @id @default(cuid())
+  /// 申請した側
   userId       String
+  /// 申請された側。承認できるのはこちらだけ
   friendUserId String
-  createdAt    DateTime @default(now())
-  user         User     @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
-  friendUser   User     @relation("UserFriendedBy", fields: [friendUserId], references: [id], onDelete: Cascade)
+  status       FriendshipStatus @default(PENDING)
+  createdAt    DateTime         @default(now())
+  respondedAt  DateTime?
+  user         User             @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
+  friendUser   User             @relation("UserFriendedBy", fields: [friendUserId], references: [id], onDelete: Cascade)
 
   @@unique([userId, friendUserId])
   @@index([userId])
   @@index([friendUserId])
+  @@index([friendUserId, status])
   @@map("friendships")
 }
 

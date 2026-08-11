@@ -8,11 +8,17 @@ import { isEmailAllowedInProduction } from "@/lib/access-control";
 import { requireUser } from "@/lib/auth";
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
 import {
+  acceptFriendRequest,
+  cancelFriendRequest,
   createUser,
   createPostWithSpotAndImages,
   deletePostByIdForUser,
   findUserByEmail,
+  FriendshipError,
   getPostDetail,
+  rejectFriendRequest,
+  removeFriend,
+  sendFriendRequest,
   toggleLike,
   updatePostByIdForUser,
 } from "@/lib/db";
@@ -305,4 +311,69 @@ export async function deletePostAction(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath("/map");
   redirect("/");
+}
+
+// --- 友達 ---
+
+/**
+ * 友達操作の共通処理。
+ *
+ * 他人の関係を操作しようとした場合、`FriendshipError` は "not_found" を返す。
+ * 権限エラー(403)にすると「その申請は存在する」と伝わってしまい、
+ * 誰と誰が友達かを第三者に推測させることになるため。
+ */
+async function runFriendAction(
+  action: (userId: string) => Promise<void>,
+): Promise<void> {
+  const user = await requireUser();
+  try {
+    await action(user.id);
+  } catch (error) {
+    if (error instanceof FriendshipError) {
+      redirect(`/friends?error=${error.code}`);
+    }
+    throw error;
+  }
+  revalidatePath("/friends");
+}
+
+export async function sendFriendRequestAction(formData: FormData): Promise<void> {
+  const targetUserId = String(formData.get("targetUserId") ?? "");
+  if (!targetUserId) redirect("/friends?error=invalid_request");
+
+  const user = await requireUser();
+  try {
+    const { accepted } = await sendFriendRequest(user.id, targetUserId);
+    revalidatePath("/friends");
+    redirect(`/friends?done=${accepted ? "accepted" : "requested"}`);
+  } catch (error) {
+    if (error instanceof FriendshipError) {
+      redirect(`/friends?error=${error.code}`);
+    }
+    throw error;
+  }
+}
+
+export async function acceptFriendRequestAction(formData: FormData): Promise<void> {
+  const friendshipId = String(formData.get("friendshipId") ?? "");
+  if (!friendshipId) redirect("/friends?error=invalid_request");
+  await runFriendAction((userId) => acceptFriendRequest(userId, friendshipId));
+}
+
+export async function rejectFriendRequestAction(formData: FormData): Promise<void> {
+  const friendshipId = String(formData.get("friendshipId") ?? "");
+  if (!friendshipId) redirect("/friends?error=invalid_request");
+  await runFriendAction((userId) => rejectFriendRequest(userId, friendshipId));
+}
+
+export async function cancelFriendRequestAction(formData: FormData): Promise<void> {
+  const friendshipId = String(formData.get("friendshipId") ?? "");
+  if (!friendshipId) redirect("/friends?error=invalid_request");
+  await runFriendAction((userId) => cancelFriendRequest(userId, friendshipId));
+}
+
+export async function removeFriendAction(formData: FormData): Promise<void> {
+  const friendUserId = String(formData.get("friendUserId") ?? "");
+  if (!friendUserId) redirect("/friends?error=invalid_request");
+  await runFriendAction((userId) => removeFriend(userId, friendUserId));
 }
